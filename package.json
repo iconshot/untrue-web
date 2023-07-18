@@ -1,0 +1,22 @@
+{
+  "name": "@untrue/web",
+  "version": "1.0.1",
+  "description": "Web integration for Untrue.",
+  "homepage": "https://untrue.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iconshot/untrue-web.git"
+  },
+  "main": "index.js",
+  "keywords": [
+    "web",
+    "untrue"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "crossroads": "^0.12.2"
+  },
+  "peerDependencies": {
+    "untrue": "^4.0.1"
+  }
+}
