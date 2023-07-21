@@ -15,7 +15,7 @@ export class Head extends Component {
   handleRender = () => {
     /*
     
-    the new Head tree will be mounted on every "render",
+    the new document.head tree will be mounted on every "render",
     this way we handle "mount" and "update" events
 
     */
@@ -26,7 +26,7 @@ export class Head extends Component {
   };
 
   handleUnmount = () => {
-    // tree will be unmounted when Head is unmounted
+    // document.head tree will be unmounted when Head is unmounted
 
     this.tree.unmount();
   };
