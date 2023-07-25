@@ -93,12 +93,12 @@ export class Router extends Component {
     const { routes } = this.props;
 
     routes.forEach((route) => {
-      this.router.addRoute(route.path, (props = {}) => {
-        const routeProps = {};
+      this.router.addRoute(route.path, (obj = {}) => {
+        const params = {};
 
         // filter out crossroads properties
 
-        Object.keys(props)
+        Object.keys(obj)
           .filter(
             (key) =>
               key !== "request_" &&
@@ -106,10 +106,10 @@ export class Router extends Component {
               !Number.isInteger(parseInt(key))
           )
           .forEach((key) => {
-            routeProps[key] = props[key];
+            params[key] = obj[key];
           });
 
-        this.updateState({ route: { ...route, props: routeProps } });
+        this.updateState({ route: { ...route, params } });
       });
     });
   }
@@ -140,18 +140,18 @@ export class Router extends Component {
       Template = null,
       path,
       Screen,
-      props: routeProps,
+      params,
       keyExtractor = null,
     } = route;
 
-    const routeKey = keyExtractor !== null ? keyExtractor(routeProps) : null;
+    const routeKey = keyExtractor !== null ? keyExtractor(params) : null;
 
     const key = `${path}${routeKey !== null ? `-${routeKey}` : ""}`;
 
     // move scrollTop to 0 on every route change
 
-    const node = new Node(Scroller, { key }, new Node(Screen, routeProps));
+    const node = new Node(Scroller, { key }, new Node(Screen, { params }));
 
-    return Template !== null ? new Node(Template, node) : node;
+    return Template !== null ? new Node(Template, { params }, node) : node;
   }
 }
