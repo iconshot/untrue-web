@@ -10,7 +10,7 @@ export class Router extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { route: null };
+    this.state = { parsed: false, route: null };
 
     this.router = crossroads.create();
 
@@ -47,7 +47,7 @@ export class Router extends Component {
     this.handleRoutes();
   };
 
-  handleUpdateRoutes = () => {
+  handleUpdateRoutes = async () => {
     const { routes } = this.props;
     const { routes: prevRoutes } = this.prevProps;
 
@@ -55,73 +55,96 @@ export class Router extends Component {
       return;
     }
 
-    const isEqual = routes.every((route) => {
-      const prevRoute = prevRoutes.find(
-        (prevRoute) => prevRoute.path === route.path
-      );
+    const isEqual =
+      routes.length === prevRoutes.length &&
+      routes.every((route) => {
+        const prevRoute = prevRoutes.find(
+          (prevRoute) => prevRoute.path === route.path
+        );
 
-      if (prevRoute === undefined) {
-        return false;
-      }
+        if (prevRoute === undefined) {
+          return false;
+        }
 
-      if (prevRoute.Screen !== route.Screen) {
-        return false;
-      }
+        if (route.Screen !== prevRoute.Screen) {
+          return false;
+        }
 
-      if (prevRoute.Template !== route.Template) {
-        return false;
-      }
+        if (route.Template !== prevRoute.Template) {
+          return false;
+        }
 
-      return true;
-    });
+        return true;
+      });
 
-    if (!isEqual) {
-      this.handleRoutes();
+    if (isEqual) {
+      return;
     }
+
+    this.handleRoutes();
   };
 
   // fired on mount and every time there's a change in routes
 
   handleRoutes() {
-    this.resetRoutes();
+    this.resetRouter();
+
     this.addRoutes();
 
     this.parseRoute();
   }
 
+  resetRouter() {
+    this.router.resetState();
+    this.router.removeAllRoutes();
+  }
+
   addRoutes() {
     const { routes } = this.props;
 
-    routes.forEach((route) => {
-      this.router.addRoute(route.path, (obj = {}) => {
-        const params = {};
+    routes
+      .filter((route) => route.path !== null)
+      .forEach((route) => {
+        this.router.addRoute(route.path, (obj = {}) => {
+          const params = {};
 
-        // filter out crossroads properties
+          // filter out crossroads properties
 
-        Object.keys(obj)
-          .filter(
-            (key) =>
-              key !== "request_" &&
-              key !== "vals_" &&
-              !Number.isInteger(parseInt(key))
-          )
-          .forEach((key) => {
-            params[key] = obj[key];
-          });
+          Object.keys(obj)
+            .filter(
+              (key) =>
+                key !== "request_" &&
+                key !== "vals_" &&
+                !Number.isInteger(parseInt(key))
+            )
+            .forEach((key) => {
+              params[key] = obj[key];
+            });
 
-        this.updateState({ route: { ...route, params } });
+          this.updateState({ route: { ...route, params } });
+        });
       });
-    });
   }
 
-  resetRoutes() {
-    this.router.resetState();
-    this.router.removeAllRoutes();
+  // fallback to null route
+
+  addFallbackRoute() {
+    const { routes } = this.props;
+
+    const fallbackRoute = routes.find((route) => route.path === null);
+
+    const route = fallbackRoute !== undefined ? { ...fallbackRoute } : null;
+
+    this.updateState({ route });
   }
 
   // pass href to router
 
   parseRoute() {
+    this.updateState({ parsed: true });
+
+    this.addFallbackRoute();
+
     const { href } = window.location;
 
     const path = `/${href.split("/").slice(3).join("/")}`;
@@ -130,7 +153,11 @@ export class Router extends Component {
   }
 
   render() {
-    const { route } = this.state;
+    const { parsed, route } = this.state;
+
+    if (!parsed) {
+      return null;
+    }
 
     if (route === null) {
       return null;
