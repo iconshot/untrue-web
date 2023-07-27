@@ -133,7 +133,8 @@ export class Router extends Component {
 
     const fallbackRoute = routes.find((route) => route.path === null);
 
-    const route = fallbackRoute !== undefined ? { ...fallbackRoute } : null;
+    const route =
+      fallbackRoute !== undefined ? { ...fallbackRoute, params: {} } : null;
 
     this.updateState({ route });
   }
@@ -164,10 +165,11 @@ export class Router extends Component {
     }
 
     const {
-      Template = null,
       path,
       Screen,
       params,
+      Template = null,
+      props = {},
       keyExtractor = null,
     } = route;
 
@@ -175,10 +177,18 @@ export class Router extends Component {
 
     const key = `${path}${routeKey !== null ? `-${routeKey}` : ""}`;
 
+    const routeProps = typeof props === "function" ? props(params) : props;
+
     // move scrollTop to 0 on every route change
 
-    const node = new Node(Scroller, { key }, new Node(Screen, { params }));
+    const node = new Node(
+      Scroller,
+      { key },
+      new Node(Screen, { ...routeProps, params })
+    );
 
-    return Template !== null ? new Node(Template, { params }, node) : node;
+    return Template !== null
+      ? new Node(Template, { ...routeProps, params }, node)
+      : node;
   }
 }
