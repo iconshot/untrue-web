@@ -10,7 +10,7 @@ export class Router extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { parsed: false, path: null, route: null };
+    this.state = { parsed: false, route: null };
 
     this.router = crossroads.create();
 
@@ -139,20 +139,14 @@ export class Router extends Component {
     this.updateState({ route });
   }
 
-  // pass href to router
+  // pass location path to router
 
   parseRoute() {
-    const { path } = this.state;
-
     const { href } = window.location;
 
     const locationPath = `/${href.split("/").slice(3).join("/")}`.split("#")[0];
 
-    if (path === locationPath) {
-      return;
-    }
-
-    this.updateState({ parsed: true, path: locationPath });
+    this.updateState({ parsed: true });
 
     this.addFallbackRoute();
 
