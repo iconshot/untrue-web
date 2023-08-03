@@ -10,7 +10,7 @@ export class Router extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { parsed: false, route: null };
+    this.state = { parsed: false, path: null, route: null };
 
     this.router = crossroads.create();
 
@@ -40,7 +40,7 @@ export class Router extends Component {
   };
 
   locationListener = () => {
-    this.parseRoute();
+    this.handleRoutes();
   };
 
   handleMountRoutes = () => {
@@ -118,7 +118,7 @@ export class Router extends Component {
                 !Number.isInteger(parseInt(key))
             )
             .forEach((key) => {
-              params[key] = obj[key];
+              params[key] = obj[key].split("#")[0];
             });
 
           this.updateState({ route: { ...route, params } });
@@ -142,15 +142,21 @@ export class Router extends Component {
   // pass href to router
 
   parseRoute() {
-    this.updateState({ parsed: true });
-
-    this.addFallbackRoute();
+    const { path } = this.state;
 
     const { href } = window.location;
 
-    const path = `/${href.split("/").slice(3).join("/")}`;
+    const locationPath = `/${href.split("/").slice(3).join("/")}`.split("#")[0];
 
-    this.router.parse(path);
+    if (path === locationPath) {
+      return;
+    }
+
+    this.updateState({ parsed: true, path: locationPath });
+
+    this.addFallbackRoute();
+
+    this.router.parse(locationPath);
   }
 
   render() {
