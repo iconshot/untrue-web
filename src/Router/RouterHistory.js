@@ -1,8 +1,4 @@
 export class RouterHistory {
-  static popState() {
-    return window.history.back();
-  }
-
   static pushState(...args) {
     this.emitLocationChange();
 

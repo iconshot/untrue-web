@@ -10,21 +10,14 @@ export class Router extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { parsed: false, route: null };
-
     this.router = crossroads.create();
 
-    this.normalize();
+    this.path = null;
+
+    this.normalizeRouter();
 
     this.on("mount", this.handleMountHistory);
     this.on("unmount", this.handleUnmountHistory);
-
-    this.on("mount", this.handleMountRoutes);
-    this.on("update", this.handleUpdateRoutes);
-  }
-
-  normalize() {
-    this.router.normalizeFn = crossroads.NORM_AS_OBJECT;
   }
 
   handleMountHistory = () => {
@@ -40,72 +33,47 @@ export class Router extends Component {
   };
 
   locationListener = () => {
-    this.handleRoutes();
-  };
+    const path = this.getLocationPath();
 
-  handleMountRoutes = () => {
-    this.handleRoutes();
-  };
-
-  handleUpdateRoutes = async () => {
-    const { routes } = this.props;
-    const { routes: prevRoutes } = this.prevProps;
-
-    if (routes === prevRoutes) {
-      return;
+    if (path !== this.path) {
+      this.update();
     }
-
-    const isEqual =
-      routes.length === prevRoutes.length &&
-      routes.every((route) => {
-        const prevRoute = prevRoutes.find(
-          (prevRoute) => prevRoute.path === route.path
-        );
-
-        if (prevRoute === undefined) {
-          return false;
-        }
-
-        if (route.Screen !== prevRoute.Screen) {
-          return false;
-        }
-
-        if (route.Template !== prevRoute.Template) {
-          return false;
-        }
-
-        return true;
-      });
-
-    if (isEqual) {
-      return;
-    }
-
-    this.handleRoutes();
   };
 
-  // fired on mount and every time there's a change in routes
-
-  handleRoutes() {
-    this.resetRouter();
-
-    this.addRoutes();
-
-    this.parseRoute();
+  normalizeRouter() {
+    this.router.normalizeFn = crossroads.NORM_AS_OBJECT;
   }
 
-  resetRouter() {
+  getLocationPath() {
+    const { href } = window.location;
+
+    return `/${href.split("/").slice(3).join("/")}`.split("#")[0];
+  }
+
+  parseRoute() {
+    const { routes } = this.props;
+
+    // reset router
+
     this.router.resetState();
     this.router.removeAllRoutes();
-  }
 
-  addRoutes() {
-    const { routes } = this.props;
+    let route = null;
+
+    // fallback route
+
+    const fallbackRoute = routes.find((tmpRoute) => tmpRoute.path === null);
+
+    if (fallbackRoute !== undefined) {
+      route = { ...fallbackRoute, params: {} };
+    }
+
+    // add routes
 
     routes
-      .filter((route) => route.path !== null)
-      .forEach((route) => {
-        this.router.addRoute(route.path, (obj = {}) => {
+      .filter((tmpRoute) => tmpRoute.path !== null)
+      .forEach((tmpRoute) => {
+        this.router.addRoute(tmpRoute.path, (obj = {}) => {
           const params = {};
 
           // filter out crossroads properties
@@ -121,74 +89,54 @@ export class Router extends Component {
               params[key] = obj[key].split("#")[0];
             });
 
-          this.updateState({ route: { ...route, params } });
+          route = { ...tmpRoute, params };
         });
       });
-  }
 
-  // fallback to null route
+    // parse path
 
-  addFallbackRoute() {
-    const { routes } = this.props;
+    const path = this.getLocationPath();
 
-    const fallbackRoute = routes.find((route) => route.path === null);
+    this.router.parse(path);
 
-    const route =
-      fallbackRoute !== undefined ? { ...fallbackRoute, params: {} } : null;
+    // store path
 
-    this.updateState({ route });
-  }
+    this.path = path;
 
-  // pass location path to router
-
-  parseRoute() {
-    const { href } = window.location;
-
-    const locationPath = `/${href.split("/").slice(3).join("/")}`.split("#")[0];
-
-    this.updateState({ parsed: true });
-
-    this.addFallbackRoute();
-
-    this.router.parse(locationPath);
+    return route;
   }
 
   render() {
-    const { parsed, route } = this.state;
-
-    if (!parsed) {
-      return null;
-    }
+    const route = this.parseRoute();
 
     if (route === null) {
       return null;
     }
 
     const {
-      path,
       Screen,
       params,
       Template = null,
       props = {},
-      keyExtractor = null,
+      keyExtractor = ({ path }) => path,
     } = route;
 
-    const routeKey = keyExtractor !== null ? keyExtractor(params) : null;
+    const routeObj = { params, path: this.path };
 
-    const key = `${path}${routeKey !== null ? `-${routeKey}` : ""}`;
+    const key = keyExtractor(routeObj);
 
-    const routeProps = typeof props === "function" ? props(params) : props;
+    const routeProps = typeof props === "function" ? props(routeObj) : props;
 
     // move scrollTop to 0 on every route change
 
     const node = new Node(
       Scroller,
       { key },
-      new Node(Screen, { ...routeProps, params })
+      new Node(Screen, { ...routeProps, route: routeObj })
     );
 
     return Template !== null
-      ? new Node(Template, { ...routeProps, params }, node)
+      ? new Node(Template, { ...routeProps, route: routeObj }, node)
       : node;
   }
 }
