@@ -54,9 +54,6 @@ export class RouterHistory {
 
     const { href, target } = element;
 
-    const locationUrl = window.location.href.split("#")[0];
-    const elementUrl = href.split("#")[0];
-
     const isSelfTarget = target === "" || target === "_self";
 
     if (
@@ -70,6 +67,9 @@ export class RouterHistory {
       return true;
     }
 
+    const locationUrl = window.location.href.split("#")[0];
+    const elementUrl = href.split("#")[0];
+
     // if urls are different, pushState
 
     if (locationUrl !== elementUrl) {
@@ -78,14 +78,20 @@ export class RouterHistory {
       return false;
     }
 
-    /*
-    
-    if there's a hash, propagate
-    if there's not a hash, do not propagate
+    const hasLocationHash = window.location.href.includes("#");
+    const hasElementHash = href.includes("#");
 
-    */
+    // if navigating from #hash to no #hash, pushState
 
-    return href.includes("#");
+    if (hasLocationHash && !hasElementHash) {
+      this.pushState(null, "", href);
+
+      return false;
+    }
+
+    // if hasElementHash, propagate to browser
+
+    return hasElementHash;
   };
 }
 
