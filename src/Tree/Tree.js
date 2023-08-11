@@ -73,28 +73,13 @@ export class Tree {
   }
 
   queue(edge, target, depthIndex) {
-    // if edge is already in stack, ignore, it will be rerendered eventually
-
-    const index = this.stack.findIndex((item) => item.getEdge() === edge);
-
-    if (index !== -1) {
-      return;
-    }
-
     // create new item
 
     const item = new Item(edge, target, depthIndex);
 
     this.stack.push(item);
 
-    /*
-
-    clear and set timeout
-
-    this allows to batch multiple components being updated at the same time
-    and also multiple update/updateState calls for a single component
-
-    */
+    // this allows to batch multiple components being updated at the same time
 
     clearTimeout(this.timeout);
 
@@ -380,7 +365,7 @@ export class Tree {
 
     /*
     
-    because of this is the final line, deeper components will trigger render first
+    because of this final line, deeper components will trigger render first
 
     the handler passed to triggerRender will be used
     when there's a "rerender" event fired in the component
