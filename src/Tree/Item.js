@@ -1,12 +1,12 @@
 export class Item {
-  constructor(component, target, depthIndex) {
-    this.component = component;
+  constructor(edge, target, depthIndex) {
+    this.edge = edge;
     this.target = target;
     this.depthIndex = depthIndex;
   }
 
-  getComponent() {
-    return this.component;
+  getEdge() {
+    return this.edge;
   }
 
   getTarget() {

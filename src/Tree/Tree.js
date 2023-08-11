@@ -72,12 +72,10 @@ export class Tree {
     this.timeout = null;
   }
 
-  queue(component, target, depthIndex) {
-    // if component is already in stack, ignore, it will be rerendered eventually
+  queue(edge, target, depthIndex) {
+    // if edge is already in stack, ignore, it will be rerendered eventually
 
-    const index = this.stack.findIndex(
-      (item) => item.getComponent() === component
-    );
+    const index = this.stack.findIndex((item) => item.getEdge() === edge);
 
     if (index !== -1) {
       return;
@@ -85,7 +83,7 @@ export class Tree {
 
     // create new item
 
-    const item = new Item(component, target, depthIndex);
+    const item = new Item(edge, target, depthIndex);
 
     this.stack.push(item);
 
@@ -100,15 +98,17 @@ export class Tree {
 
     clearTimeout(this.timeout);
 
-    this.timeout = setTimeout(() => {
-      this.rerender();
-    });
+    this.timeout = setTimeout(() => this.rerender());
   }
 
-  unqueue(component) {
-    // remove component's item from the stack
+  unqueue(edge) {
+    // remove edge from the stack
 
-    this.stack = this.stack.filter((item) => item.getComponent() !== component);
+    const component = edge.getComponent();
+
+    this.stack = this.stack.filter(
+      (item) => item.getEdge().getComponent() !== component
+    );
   }
 
   rerender() {
@@ -124,7 +124,7 @@ export class Tree {
       (a, b) => a.getDepthIndex() - b.getDepthIndex()
     )[0];
 
-    const component = item.getComponent();
+    const edge = item.getEdge();
     const target = item.getTarget();
     const depthIndex = item.getDepthIndex();
 
@@ -137,8 +137,6 @@ export class Tree {
     while edge will be updated inside renderComponent
     
     */
-
-    const edge = component.getNode().getEdge();
 
     const clone = edge.clone();
 
@@ -325,23 +323,17 @@ export class Tree {
       component = new ComponentClass(props);
     } else {
       component.updateProps(props);
+
+      component.replaceUpdated();
     }
-
-    // update node with new edge
-
-    node.setEdge(edge);
-
-    // update component with new node
-
-    component.setNode(node);
 
     // update edge with the new component or the current one
 
     edge.setComponent(component);
 
-    // unqueue component
+    // unqueue edge
 
-    this.unqueue(component);
+    this.unqueue(edge);
 
     // update ref and currentRef if necessary
 
@@ -359,19 +351,6 @@ export class Tree {
 
     if (ref !== null && ref instanceof Ref && ref !== currentRef) {
       ref.setValue(component);
-    }
-
-    /*
-    
-    replaceUpdated() will move component.nextState and component.nextProps
-    to component.state and component.props respectively
-
-    after this point, we will have the right component.state and component.props
-
-    */
-
-    if (component.isUpdated()) {
-      component.replaceUpdated();
     }
 
     // now it's safe to get component's new content
@@ -409,7 +388,7 @@ export class Tree {
     */
 
     component.triggerRender(() => {
-      this.queue(component, target, depthIndex);
+      this.queue(edge, target, depthIndex);
     });
   }
 
@@ -988,7 +967,7 @@ export class Tree {
     */
 
     if (component !== null) {
-      this.unqueue(component);
+      this.unqueue(edge);
 
       component.triggerUnmount();
     }
