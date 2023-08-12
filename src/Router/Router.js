@@ -107,6 +107,8 @@ export class Router extends Component {
   }
 
   render() {
+    let { Template = null } = this.props;
+
     const route = this.parseRoute();
 
     if (route === null) {
@@ -116,10 +118,17 @@ export class Router extends Component {
     const {
       Screen,
       params,
-      Template = null,
       props = {},
       keyExtractor = ({ path }) => path,
     } = route;
+
+    // override Route Template if needed
+
+    if ("Template" in route) {
+      ({ Template = null } = route);
+    }
+
+    // route data
 
     const routeObj = { params, path: this.path };
 
