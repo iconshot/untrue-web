@@ -486,10 +486,10 @@ export class Tree {
       // loop through attributes
 
       for (const key in attributes) {
-        const value = attributes[key];
+        const { [key]: value = null } = attributes;
 
-        const currentValue =
-          key in currentAttributes ? currentAttributes[key] : null;
+        const { [key]: currentValue = null } =
+          key in currentAttributes ? currentAttributes : {};
 
         switch (key) {
           case "key": {
