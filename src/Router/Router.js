@@ -10,11 +10,7 @@ export class Router extends Component {
   constructor(props) {
     super(props);
 
-    this.router = crossroads.create();
-
-    this.path = null;
-
-    this.normalizeRouter();
+    this.locationPath = null;
 
     this.on("mount", this.handleMountHistory);
     this.on("unmount", this.handleUnmountHistory);
@@ -33,30 +29,23 @@ export class Router extends Component {
   };
 
   locationListener = () => {
-    const path = this.getLocationPath();
+    const locationPath = this.getLocationPath();
 
-    if (path !== this.path) {
+    if (locationPath !== this.locationPath) {
       this.update();
     }
   };
 
-  normalizeRouter() {
-    this.router.normalizeFn = crossroads.NORM_AS_OBJECT;
-  }
-
   getLocationPath() {
-    const { href } = window.location;
-
-    return `/${href.split("/").slice(3).join("/")}`.split("#")[0];
+    return `/${window.location.pathname.replace(/^\/|\/$/g, "")}`;
   }
 
   parseRoute() {
-    const { routes } = this.props;
+    const { path = "/", routes } = this.props;
 
-    // reset router
+    const router = crossroads.create();
 
-    this.router.resetState();
-    this.router.removeAllRoutes();
+    router.normalizeFn = crossroads.NORM_AS_OBJECT;
 
     let route = null;
 
@@ -73,7 +62,9 @@ export class Router extends Component {
     routes
       .filter((tmpRoute) => tmpRoute.path !== null)
       .forEach((tmpRoute) => {
-        this.router.addRoute(tmpRoute.path, (obj = {}) => {
+        const routePath = `${path !== "/" ? path : ""}${tmpRoute.path}`;
+
+        router.addRoute(routePath, (obj = {}) => {
           const params = {};
 
           // filter out crossroads properties
@@ -86,7 +77,7 @@ export class Router extends Component {
                 !Number.isInteger(parseInt(key))
             )
             .forEach((key) => {
-              params[key] = obj[key].split("#")[0];
+              params[key] = obj[key];
             });
 
           route = { ...tmpRoute, params };
@@ -95,19 +86,25 @@ export class Router extends Component {
 
     // parse path
 
-    const path = this.getLocationPath();
+    const locationPath = this.getLocationPath();
 
-    this.router.parse(path);
+    router.parse(locationPath);
 
     // store path
 
-    this.path = path;
+    this.locationPath = locationPath;
 
     return route;
   }
 
   render() {
-    let { Template = null } = this.props;
+    const { path = "/" } = this.props;
+
+    let {
+      Template = null,
+      props = {},
+      uniqueKey = ({ path }) => path,
+    } = this.props;
 
     const route = this.parseRoute();
 
@@ -115,12 +112,7 @@ export class Router extends Component {
       return null;
     }
 
-    const {
-      Screen,
-      params,
-      props = {},
-      keyExtractor = ({ path }) => path,
-    } = route;
+    const { Screen, params } = route;
 
     // override Route Template if needed
 
@@ -128,11 +120,27 @@ export class Router extends Component {
       ({ Template = null } = route);
     }
 
+    if ("props" in route) {
+      ({ props = {} } = route);
+    }
+
+    if ("uniqueKey" in route) {
+      ({ uniqueKey = ({ path }) => path } = route);
+    }
+
     // route data
 
-    const routeObj = { params, path: this.path };
+    const routePath =
+      path !== "/"
+        ? path !== this.locationPath
+          ? this.locationPath.slice(path.length)
+          : "/"
+        : this.locationPath;
 
-    const key = keyExtractor(routeObj);
+    const routeObj = { params, path: routePath };
+
+    const routeKey =
+      typeof uniqueKey === "function" ? uniqueKey(routeObj) : uniqueKey;
 
     const routeProps = typeof props === "function" ? props(routeObj) : props;
 
@@ -140,7 +148,7 @@ export class Router extends Component {
 
     const node = new Node(
       Scroller,
-      { key },
+      { key: routeKey },
       new Node(Screen, { ...routeProps, route: routeObj })
     );
 
