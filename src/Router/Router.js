@@ -1,4 +1,4 @@
-import { Node, Component } from "untrue";
+import { Comparer, Component, Node } from "untrue";
 
 import crossroads from "crossroads";
 
@@ -11,6 +11,8 @@ export class Router extends Component {
     super(props);
 
     this.locationPath = null;
+
+    this.route = null;
 
     this.on("mount", this.handleMountHistory);
     this.on("unmount", this.handleUnmountHistory);
@@ -31,9 +33,29 @@ export class Router extends Component {
   locationListener = () => {
     const locationPath = this.getLocationPath();
 
-    if (locationPath !== this.locationPath) {
-      this.update();
+    // ignore changes like /page?hello=world -> /page?hello=mars
+
+    if (locationPath === this.locationPath) {
+      return;
     }
+
+    const route = this.parseRoute();
+
+    // ignore same path and params
+
+    if (route !== null && this.route !== null) {
+      const { path, params } = route;
+      const { path: currentPath, params: currentParams } = this.route;
+
+      const notUpdated =
+        path === currentPath && Comparer.compareDeep(params, currentParams);
+
+      if (notUpdated) {
+        return;
+      }
+    }
+
+    this.update();
   };
 
   getLocationPath() {
@@ -41,13 +63,17 @@ export class Router extends Component {
   }
 
   parseRoute() {
-    const { path = "/", routes } = this.props;
+    const { base = "/", routes } = this.props;
 
     const router = crossroads.create();
 
     router.normalizeFn = crossroads.NORM_AS_OBJECT;
 
     let route = null;
+
+    // default route
+
+    route = { path: null, Screen: null, params: {} };
 
     // fallback route
 
@@ -62,9 +88,15 @@ export class Router extends Component {
     routes
       .filter((tmpRoute) => tmpRoute.path !== null)
       .forEach((tmpRoute) => {
-        const routePath = `${path !== "/" ? path : ""}${tmpRoute.path}`;
+        const { nested = false } = tmpRoute;
 
-        router.addRoute(routePath, (obj = {}) => {
+        let tmpPath = `${base !== "/" ? base : ""}${tmpRoute.path}`;
+
+        if (nested) {
+          tmpPath += "/:rest*:";
+        }
+
+        router.addRoute(tmpPath, (obj = {}) => {
           const params = {};
 
           // filter out crossroads properties
@@ -79,6 +111,10 @@ export class Router extends Component {
             .forEach((key) => {
               params[key] = obj[key];
             });
+
+          if (nested) {
+            delete params["rest*"];
+          }
 
           route = { ...tmpRoute, params };
         });
@@ -98,9 +134,10 @@ export class Router extends Component {
   }
 
   render() {
-    const { path = "/" } = this.props;
+    const { base = "/" } = this.props;
 
     let {
+      scroll = true,
       Template = null,
       props = {},
       uniqueKey = ({ path }) => path,
@@ -108,13 +145,15 @@ export class Router extends Component {
 
     const route = this.parseRoute();
 
-    if (route === null) {
-      return null;
+    this.route = route;
+
+    const { Screen, params, nested = false } = route;
+
+    // override defaults
+
+    if ("scroll" in route) {
+      ({ scroll = true } = route);
     }
-
-    const { Screen, params } = route;
-
-    // override Route Template if needed
 
     if ("Template" in route) {
       ({ Template = null } = route);
@@ -130,12 +169,13 @@ export class Router extends Component {
 
     // route data
 
-    const routePath =
-      path !== "/"
-        ? path !== this.locationPath
-          ? this.locationPath.slice(path.length)
+    const routePath = !nested
+      ? base !== "/"
+        ? base !== this.locationPath
+          ? this.locationPath.slice(base.length)
           : "/"
-        : this.locationPath;
+        : this.locationPath
+      : null;
 
     const routeObj = { params, path: routePath };
 
@@ -144,10 +184,12 @@ export class Router extends Component {
 
     const routeProps = typeof props === "function" ? props(routeObj) : props;
 
-    // move scrollTop to 0 on every route change
+    // Scroller will set scrollTop to 0 on every route change
+
+    const Container = scroll ? Scroller : null;
 
     const node = new Node(
-      Scroller,
+      Container,
       { key: routeKey },
       new Node(Screen, { ...routeProps, route: routeObj })
     );
