@@ -1,4 +1,4 @@
-import { Node, Ref } from "../../../untrue";
+import { Node, Ref } from "untrue";
 
 import { Item } from "./Item";
 import { Edge } from "./Edge";
