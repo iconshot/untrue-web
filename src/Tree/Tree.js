@@ -1,4 +1,4 @@
-import { Node, Ref } from "untrue";
+import { Node, Ref } from "../../../untrue";
 
 import { Item } from "./Item";
 import { Edge } from "./Edge";
@@ -105,9 +105,9 @@ export class Tree {
 
     // get a stack item, closer to the root first
 
-    const item = this.stack.sort(
-      (a, b) => a.getDepthIndex() - b.getDepthIndex()
-    )[0];
+    this.stack.sort((a, b) => a.getDepthIndex() - b.getDepthIndex());
+
+    const item = this.stack[0];
 
     const edge = item.getEdge();
     const target = item.getTarget();

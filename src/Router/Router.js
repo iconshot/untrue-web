@@ -1,4 +1,4 @@
-import { Comparer, Component, Node } from "untrue";
+import { Comparer, Component, Node } from "../../../untrue";
 
 import crossroads from "crossroads";
 

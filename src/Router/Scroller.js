@@ -1,4 +1,4 @@
-import { Component } from "untrue";
+import { Component } from "../../../untrue";
 
 // Scroller will move scrollTop to 0 on every route change
 
