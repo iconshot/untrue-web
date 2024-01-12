@@ -1,4 +1,4 @@
-import { Comparer, Component, Node } from "untrue";
+import { $, Comparer, Component } from "untrue";
 
 import crossroads from "crossroads";
 
@@ -188,14 +188,14 @@ export class Router extends Component {
 
     const Container = scroll ? Scroller : null;
 
-    const node = new Node(
+    const node = $(
       Container,
       { key: routeKey },
-      new Node(Screen, { ...routeProps, route: routeObj })
+      $(Screen, { ...routeProps, route: routeObj })
     );
 
     return Template !== null
-      ? new Node(Template, { ...routeProps, route: routeObj }, node)
+      ? $(Template, { ...routeProps, route: routeObj }, node)
       : node;
   }
 }

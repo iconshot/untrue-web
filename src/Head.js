@@ -1,4 +1,4 @@
-import { Component, Node } from "untrue";
+import { $, Component } from "untrue";
 
 import { Tree } from "./Tree/Tree";
 
@@ -22,7 +22,7 @@ export class Head extends Component {
 
     const { children } = this.props;
 
-    this.tree.mount(new Node(children));
+    this.tree.mount($(children));
   };
 
   handleUnmount = () => {
