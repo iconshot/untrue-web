@@ -1,4 +1,4 @@
-import { $, Component } from "untrue";
+import $, { Component } from "untrue";
 
 import { Tree } from "./Tree/Tree";
 

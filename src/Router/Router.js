@@ -1,4 +1,4 @@
-import { $, Comparer, Component } from "untrue";
+import $, { Comparer, Component } from "untrue";
 
 import crossroads from "crossroads";
 
