@@ -1,4 +1,4 @@
-export class Item {
+class Item {
   constructor(edge, target, depthIndex) {
     this.edge = edge;
     this.target = target;
@@ -17,3 +17,5 @@ export class Item {
     return this.depthIndex;
   }
 }
+
+export default Item;

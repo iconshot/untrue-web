@@ -1,10 +1,10 @@
 import { Node, Ref } from "untrue";
 
-import { Item } from "./Item";
-import { Edge } from "./Edge";
-import { Target } from "./Target";
+import Item from "./Item";
+import Edge from "./Edge";
+import Target from "./Target";
 
-export class Tree {
+class Tree {
   constructor(domNode) {
     // starting target's domNode
 
@@ -307,9 +307,7 @@ export class Tree {
 
       component = new ComponentClass(props);
     } else {
-      component.updateProps(props);
-
-      component.replaceUpdated();
+      component.prepareUpdate(props);
     }
 
     // update edge with the new component or the current one
@@ -996,3 +994,5 @@ export class Tree {
     }
   }
 }
+
+export default Tree;

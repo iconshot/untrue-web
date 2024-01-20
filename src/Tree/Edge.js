@@ -1,4 +1,4 @@
-export class Edge {
+class Edge {
   constructor(
     node,
     parent = null,
@@ -63,3 +63,5 @@ export class Edge {
     );
   }
 }
+
+export default Edge;

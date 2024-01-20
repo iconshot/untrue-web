@@ -1,4 +1,4 @@
-export class Target {
+class Target {
   constructor(domNode, index = 0) {
     // nodes will be added to this domNode
 
@@ -46,3 +46,5 @@ export class Target {
     }
   }
 }
+
+export default Target;

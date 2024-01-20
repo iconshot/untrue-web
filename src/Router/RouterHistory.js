@@ -1,4 +1,4 @@
-export class RouterHistory {
+class RouterHistory {
   static pushState(...args) {
     this.emitLocationChange();
 
@@ -92,3 +92,5 @@ export class RouterHistory {
 }
 
 RouterHistory.initialized = false;
+
+export default RouterHistory;

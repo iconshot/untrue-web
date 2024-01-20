@@ -1,8 +1,8 @@
 import $, { Component } from "untrue";
 
-import { Tree } from "./Tree/Tree";
+import Tree from "./Tree/Tree";
 
-export class Head extends Component {
+class Head extends Component {
   constructor(props) {
     super(props);
 
@@ -31,3 +31,5 @@ export class Head extends Component {
     this.tree.unmount();
   };
 }
+
+export default Head;

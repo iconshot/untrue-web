@@ -2,11 +2,11 @@ import $, { Comparer, Component } from "untrue";
 
 import crossroads from "crossroads";
 
-import { RouterHistory } from "./RouterHistory";
+import RouterHistory from "./RouterHistory";
 
-import { Scroller } from "./Scroller";
+import Scroller from "./Scroller";
 
-export class Router extends Component {
+class Router extends Component {
   constructor(props) {
     super(props);
 
@@ -199,3 +199,5 @@ export class Router extends Component {
       : node;
   }
 }
+
+export default Router;

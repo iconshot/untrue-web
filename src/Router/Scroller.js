@@ -2,7 +2,7 @@ import { Component } from "untrue";
 
 // Scroller will move scrollTop to 0 on every route change
 
-export class Scroller extends Component {
+class Scroller extends Component {
   constructor(props) {
     super(props);
 
@@ -19,3 +19,5 @@ export class Scroller extends Component {
     return children;
   }
 }
+
+export default Scroller;
