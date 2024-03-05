@@ -1,4 +1,4 @@
-class Item {
+class StackItem {
   constructor(edge, target, depthIndex) {
     this.edge = edge;
     this.target = target;
@@ -18,4 +18,4 @@ class Item {
   }
 }
 
-export default Item;
+export default StackItem;

@@ -1,8 +1,8 @@
 import { Node, Ref } from "untrue";
 
-import Item from "./Item";
-import Edge from "./Edge";
 import Target from "./Target";
+import Edge from "./Edge";
+import StackItem from "./StackItem";
 
 class Tree {
   constructor(domNode) {
@@ -75,7 +75,7 @@ class Tree {
   queue(edge, target, depthIndex) {
     // create new item
 
-    const item = new Item(edge, target, depthIndex);
+    const item = new StackItem(edge, target, depthIndex);
 
     this.stack.push(item);
 
@@ -173,26 +173,25 @@ class Tree {
     const currentChildren =
       currentEdge !== null ? currentEdge.getChildren() : [];
 
-    // loop through currentChildren
+    // unmount loop
 
-    let i = -1;
-
-    for (const currentChild of currentChildren) {
-      i++;
+    for (let i = 0; i < currentChildren.length; i++) {
+      const currentChild = currentChildren[i];
 
       let child = null;
 
+      const currentNode = currentChild.getNode();
+
       // set child as equal child (based on type and key)
 
-      if (
-        currentChild.getNode() instanceof Node &&
-        currentChild.getNode().getKey() !== null
-      ) {
-        const tmpChild = children.find((tmpChild) =>
-          this.isEqual(currentChild, tmpChild)
-        );
+      if (currentNode instanceof Node && currentNode.getKey() !== null) {
+        for (const tmpChild of children) {
+          if (this.isEqual(currentChild, tmpChild)) {
+            child = tmpChild;
 
-        child = tmpChild !== undefined ? tmpChild : null;
+            break;
+          }
+        }
       }
 
       // if child is null, set child as same index child (only if they're equal)
@@ -205,39 +204,38 @@ class Tree {
         }
       }
 
-      // if not an equal child has been found, unmount currentChild
+      // if no equal child has been found, unmount currentChild
 
       if (child === null) {
         this.unmountEdge(currentChild, target);
       }
     }
 
-    // loop through children
+    // render loop
 
-    let j = -1;
-
-    for (const child of children) {
-      j++;
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
 
       let currentChild = null;
 
+      const node = child.getNode();
+
       // set currentChild as equal current child (based on type and key)
 
-      if (
-        child.getNode() instanceof Node &&
-        child.getNode().getKey() !== null
-      ) {
-        const tmpChild = currentChildren.find((tmpChild) =>
-          this.isEqual(child, tmpChild)
-        );
+      if (node instanceof Node && node.getKey() !== null) {
+        for (const tmpChild of currentChildren) {
+          if (this.isEqual(child, tmpChild)) {
+            currentChild = tmpChild;
 
-        currentChild = tmpChild !== undefined ? tmpChild : null;
+            break;
+          }
+        }
       }
 
       // if currentChild is null, set currentChild as same index current child (only if they're equal)
 
-      if (currentChild === null && j < currentChildren.length) {
-        const tmpChild = currentChildren[j];
+      if (currentChild === null && i < currentChildren.length) {
+        const tmpChild = currentChildren[i];
 
         if (this.isEqual(child, tmpChild)) {
           currentChild = tmpChild;
@@ -910,7 +908,7 @@ class Tree {
     return null;
   }
 
-  unmountEdge(edge, target) {
+  unmountEdge(edge, target, removed = false) {
     const node = edge.getNode();
     const domNode = edge.getDomNode();
     const component = edge.getComponent();
@@ -918,8 +916,10 @@ class Tree {
 
     // remove dom node, if any
 
-    if (domNode !== null) {
+    if (domNode !== null && !removed) {
       target.remove(domNode);
+
+      removed = true;
     }
 
     // update ref
@@ -935,7 +935,7 @@ class Tree {
     for (const child of children) {
       const finalTarget = domNode !== null ? new Target(domNode) : target;
 
-      this.unmountEdge(child, finalTarget);
+      this.unmountEdge(child, finalTarget, removed);
     }
 
     /*
