@@ -1,6 +1,6 @@
 import $, { Component } from "untrue";
 
-import Tree from "./Tree/Tree";
+import Tree from "../Tree/Tree";
 
 class Head extends Component {
   constructor(props) {

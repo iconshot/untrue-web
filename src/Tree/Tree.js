@@ -914,12 +914,19 @@ class Tree {
     const component = edge.getComponent();
     const children = edge.getChildren();
 
+    let tmpTarget = target;
+    let tmpRemoved = removed;
+
     // remove dom node, if any
 
-    if (domNode !== null && !removed) {
-      target.remove(domNode);
+    if (domNode !== null) {
+      if (!removed) {
+        target.remove(domNode);
 
-      removed = true;
+        tmpRemoved = true;
+      }
+
+      tmpTarget = new Target(domNode);
     }
 
     // update ref
@@ -933,9 +940,7 @@ class Tree {
     // unmount children
 
     for (const child of children) {
-      const finalTarget = domNode !== null ? new Target(domNode) : target;
-
-      this.unmountEdge(child, finalTarget, removed);
+      this.unmountEdge(child, tmpTarget, tmpRemoved);
     }
 
     /*
