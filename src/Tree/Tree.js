@@ -908,25 +908,28 @@ class Tree {
     return null;
   }
 
-  unmountEdge(edge, target, removed = false) {
+  unmountEdge(edge, target) {
     const node = edge.getNode();
     const domNode = edge.getDomNode();
     const component = edge.getComponent();
     const children = edge.getChildren();
 
     let tmpTarget = target;
-    let tmpRemoved = removed;
 
-    // remove dom node, if any
+    /*
+    
+    remove dom node, if any
+    
+    tmpTarget will then be set to null and will be passed to children's unmountEdge
+    so only the first domNode in a sub-tree will call remove
+    because once a domNode is removed, all of its children are removed
 
-    if (domNode !== null) {
-      if (!removed) {
-        target.remove(domNode);
+    */
 
-        tmpRemoved = true;
-      }
+    if (domNode !== null && target !== null) {
+      target.remove(domNode);
 
-      tmpTarget = new Target(domNode);
+      tmpTarget = null;
     }
 
     // update ref
@@ -940,7 +943,7 @@ class Tree {
     // unmount children
 
     for (const child of children) {
-      this.unmountEdge(child, tmpTarget, tmpRemoved);
+      this.unmountEdge(child, tmpTarget);
     }
 
     /*
