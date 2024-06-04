@@ -267,18 +267,24 @@ class Tree {
 
     */
 
-    if (node instanceof Node) {
-      if (node.isComponent()) {
-        this.renderComponent(edge, currentEdge, target, depthIndex);
-      } else if (node.isFunction()) {
-        this.renderFunction(edge, currentEdge, target, depthIndex);
-      } else if (node.isElement()) {
-        this.renderElement(edge, currentEdge, target, depthIndex);
-      } else if (node.isNull()) {
-        this.renderNull(edge, currentEdge, target, depthIndex);
+    try {
+      if (node instanceof Node) {
+        if (node.isComponent()) {
+          this.renderComponent(edge, currentEdge, target, depthIndex);
+        } else if (node.isFunction()) {
+          this.renderFunction(edge, currentEdge, target, depthIndex);
+        } else if (node.isElement()) {
+          this.renderElement(edge, currentEdge, target, depthIndex);
+        } else if (node.isNull()) {
+          this.renderNull(edge, currentEdge, target, depthIndex);
+        }
+      } else if (node !== null && node !== undefined && node !== false) {
+        this.renderString(edge, currentEdge, target);
       }
-    } else if (node !== null && node !== undefined && node !== false) {
-      this.renderString(edge, currentEdge, target);
+    } catch (error) {
+      queueMicrotask(() => {
+        throw error;
+      });
     }
   }
 
@@ -300,7 +306,7 @@ class Tree {
 
     // create the new component or update the current one
 
-    if (currentEdge === null) {
+    if (component === null) {
       const ComponentClass = type;
 
       component = new ComponentClass(props);
@@ -384,11 +390,11 @@ class Tree {
     const children = Function(props);
 
     /*
-
-    same as with the renderComponent, we call node.setChildren() and then renderChildren()
-    while keeping the current sub-tree inside currentEdge
-
-    */
+      
+      same as with the renderComponent, we call node.setChildren() and then renderChildren()
+      while keeping the current sub-tree inside currentEdge
+      
+      */
 
     node.setChildren(children);
 
@@ -398,10 +404,11 @@ class Tree {
   renderElement(edge, currentEdge, target, depthIndex) {
     // domNode will be an element node
 
-    const domNode =
-      currentEdge === null
-        ? this.createDomNode(edge)
-        : currentEdge.getDomNode();
+    let domNode = currentEdge !== null ? currentEdge.getDomNode() : null;
+
+    if (domNode === null) {
+      domNode = this.createDomNode(edge);
+    }
 
     edge.setDomNode(domNode);
 
@@ -425,19 +432,14 @@ class Tree {
     this.renderChildren(edge, currentEdge, newTarget, depthIndex);
   }
 
-  renderNull(edge, currentEdge, target, depthIndex) {
-    // if node type is null, we do nothing but loop through its children
-
-    this.renderChildren(edge, currentEdge, target, depthIndex);
-  }
-
   renderString(edge, currentEdge, target) {
     // domNode will be a text node
 
-    const domNode =
-      currentEdge === null
-        ? this.createDomNode(edge)
-        : currentEdge.getDomNode();
+    let domNode = currentEdge !== null ? currentEdge.getDomNode() : null;
+
+    if (domNode === null) {
+      domNode = this.createDomNode(edge);
+    }
 
     edge.setDomNode(domNode);
 
@@ -446,6 +448,12 @@ class Tree {
     target.insert(domNode);
 
     // text nodes are leafs, so no need for renderChildren()
+  }
+
+  renderNull(edge, currentEdge, target, depthIndex) {
+    // if node type is null, we do nothing but loop through its children
+
+    this.renderChildren(edge, currentEdge, target, depthIndex);
   }
 
   createDomNode(edge) {
@@ -542,7 +550,13 @@ class Tree {
                 }
 
                 if (value !== currentValue) {
-                  domNode.setAttribute(key, value);
+                  try {
+                    domNode.setAttribute(key, value);
+                  } catch (error) {
+                    queueMicrotask(() => {
+                      throw error;
+                    });
+                  }
                 }
               }
             } else {
