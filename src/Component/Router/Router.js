@@ -47,10 +47,10 @@ class Router extends Component {
       const { path, params } = route;
       const { path: currentPath, params: currentParams } = this.route;
 
-      const notUpdated =
-        path === currentPath && Comparer.compareDeep(params, currentParams);
+      const equal =
+        path === currentPath && Comparer.compare(params, currentParams);
 
-      if (notUpdated) {
+      if (equal) {
         return;
       }
     }
