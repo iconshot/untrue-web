@@ -336,15 +336,11 @@ class Tree {
 
     const currentRef = currentNode !== null ? currentNode.getRef() : null;
 
-    if (
-      currentRef !== null &&
-      currentRef instanceof Ref &&
-      currentRef !== ref
-    ) {
+    if (currentRef instanceof Ref && currentRef !== ref) {
       currentRef.setValue(null);
     }
 
-    if (ref !== null && ref instanceof Ref && ref !== currentRef) {
+    if (ref instanceof Ref && ref !== currentRef) {
       ref.setValue(component);
     }
 
@@ -514,15 +510,11 @@ class Tree {
 
             // update ref and currentRef
 
-            if (
-              currentRef !== null &&
-              currentRef instanceof Ref &&
-              currentRef !== ref
-            ) {
+            if (currentRef instanceof Ref && currentRef !== ref) {
               currentRef.setValue(null);
             }
 
-            if (ref !== null && ref instanceof Ref && ref !== currentRef) {
+            if (ref instanceof Ref && ref !== currentRef) {
               ref.setValue(domNode);
             }
 
@@ -605,7 +597,7 @@ class Tree {
 
             const currentRef = currentValue;
 
-            if (currentRef !== null && currentRef instanceof Ref) {
+            if (currentRef instanceof Ref) {
               currentRef.setValue(null);
             }
           }
@@ -958,7 +950,7 @@ class Tree {
 
     const ref = node instanceof Node ? node.getRef() : null;
 
-    if (ref !== null && ref instanceof Ref) {
+    if (ref instanceof Ref) {
       ref.setValue(null);
     }
 
