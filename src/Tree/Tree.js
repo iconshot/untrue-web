@@ -127,7 +127,7 @@ class Tree {
 
     /*
     
-    targetIndex means where should we start inserting DOM nodes inside targetDomNode
+    targetIndex means where we should start inserting DOM nodes inside targetDomNode
     
     we need to search for it in every rerender
     because a sibling component could remove/add DOM nodes from targetDomNode any time
@@ -151,7 +151,7 @@ class Tree {
 
   // convert node.children to Edge objects
 
-  parseChildren(edge) {
+  createChildren(edge) {
     const node = edge.getNode();
 
     const children = node instanceof Node ? node.getChildren() : [];
@@ -162,9 +162,9 @@ class Tree {
   }
 
   renderChildren(edge, currentEdge, target, depthIndex) {
-    // parse the children first
+    // create the children first
 
-    this.parseChildren(edge);
+    this.createChildren(edge);
 
     // children will be an array of Edge objects
 
@@ -259,6 +259,14 @@ class Tree {
   renderEdge(edge, currentEdge, target, depthIndex) {
     const node = edge.getNode();
 
+    // in case there's an error, edge keeps children from currentEdge
+
+    if (currentEdge !== null) {
+      const currentChildren = currentEdge.getChildren();
+
+      edge.setChildren(currentChildren);
+    }
+
     /*
 
     check type of node and call the right render method
@@ -348,14 +356,14 @@ class Tree {
 
     store the content inside node
 
-    the renderChildren() method will then call parseChildren(),
+    the renderChildren() method will then call createChildren(),
     which will convert all the child nodes to Edge objects
 
     for updated components, currentEdge will be a clone of edge,
     meaning node will be equal to currentEdge.getNode(),
     but this shouldn't be a problem because first we call node.setChildren
     which will update node with the new child nodes
-    and then we call renderChildren which will call parseChildren
+    and then we call renderChildren which will call createChildren
     meaning every child edge will be brand new,
     all of this while currentEdge keeps the current sub-tree
 
