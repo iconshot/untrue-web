@@ -115,15 +115,15 @@ class Tree {
 
     /*
     
-    clone edge to use with renderComponent
+    clone edge to use with renderEdge
     
     the clone will have the references to current components and DOM nodes
     and the overall current sub-tree
-    while edge will be updated inside renderComponent
+    while edge will be updated inside renderEdge
     
     */
 
-    const clone = edge.clone();
+    const currentEdge = edge.clone();
 
     /*
     
@@ -142,7 +142,7 @@ class Tree {
 
     // rerender component
 
-    this.renderComponent(edge, clone, newTarget, depthIndex);
+    this.renderEdge(edge, currentEdge, newTarget, depthIndex);
 
     // call again to rerender remaining components
 
