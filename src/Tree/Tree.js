@@ -287,7 +287,7 @@ class Tree {
           this.renderNull(edge, currentEdge, target, depthIndex);
         }
       } else if (node !== null && node !== undefined && node !== false) {
-        this.renderString(edge, currentEdge, target);
+        this.renderString(edge, currentEdge, target, depthIndex);
       }
     } catch (error) {
       queueMicrotask(() => {
@@ -436,7 +436,7 @@ class Tree {
     this.renderChildren(edge, currentEdge, newTarget, depthIndex);
   }
 
-  renderString(edge, currentEdge, target) {
+  renderString(edge, currentEdge, target, depthIndex) {
     // domNode will be a text node
 
     let domNode = currentEdge !== null ? currentEdge.getDomNode() : null;
