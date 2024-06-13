@@ -982,9 +982,9 @@ class Tree {
     const node = edge.getNode();
     const currentNode = currentEdge.getNode();
 
-    if (node instanceof Node) {
-      //  check nodes based on type and key
+    //  check nodes based on type and key
 
+    if (node instanceof Node) {
       if (!(currentNode instanceof Node)) {
         return false;
       }
@@ -996,24 +996,26 @@ class Tree {
       const currentKey = currentNode.getKey();
 
       return type === currentType && key === currentKey;
-    } else if (node === null || node === undefined || node === false) {
-      // null, undefined and false are special cases since they will be ignored by renderEdge
+    }
 
+    // null, undefined and false are special cases since they will be ignored by renderEdge
+
+    if (node === null || node === undefined || node === false) {
       return (
         currentNode === null ||
         currentNode === undefined ||
         currentNode === false
       );
-    } else {
-      // check if both nodes are texts
-
-      return (
-        currentNode !== null &&
-        currentNode !== undefined &&
-        currentNode !== false &&
-        !(currentNode instanceof Node)
-      );
     }
+
+    // check if both nodes are texts
+
+    return (
+      currentNode !== null &&
+      currentNode !== undefined &&
+      currentNode !== false &&
+      !(currentNode instanceof Node)
+    );
   }
 }
 
