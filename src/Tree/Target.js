@@ -39,11 +39,7 @@ class Target {
   }
 
   remove(child) {
-    // if child is in this.domNode, remove it
-
-    if (this.domNode.contains(child)) {
-      child.remove();
-    }
+    child.remove();
   }
 }
 
