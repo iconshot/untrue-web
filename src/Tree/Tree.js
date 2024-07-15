@@ -418,8 +418,6 @@ class Tree {
 
     this.patchDomNode(edge, currentEdge);
 
-    target.insert(domNode);
-
     /*
     
     newTarget is needed to insert child DOM nodes inside domNode
@@ -434,6 +432,15 @@ class Tree {
     const newTarget = new Target(domNode);
 
     this.renderChildren(edge, currentEdge, newTarget, depthIndex);
+
+    /*
+    
+    browsers usually optimize reflows but we call insert after renderChildren
+    to keep good practices and reduce reflows if possible
+
+    */
+
+    target.insert(domNode);
   }
 
   renderString(edge, currentEdge, target, depthIndex) {
