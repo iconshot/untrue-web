@@ -1,18 +1,18 @@
-import $, { Component } from "untrue";
+import $, { Component, Props } from "untrue";
 
-import Tree from "../Tree/Tree";
+import { Tree } from "../Tree/Tree";
 
-class Head extends Component {
-  constructor(props) {
+export class Head extends Component {
+  private tree: Tree = new Tree(document.head);
+
+  constructor(props: Props) {
     super(props);
-
-    this.tree = new Tree(document.head);
 
     this.on("render", this.handleRender);
     this.on("unmount", this.handleUnmount);
   }
 
-  handleRender = () => {
+  private handleRender = () => {
     /*
     
     the new document.head tree will be mounted on every "render",
@@ -22,10 +22,10 @@ class Head extends Component {
 
     const { children } = this.props;
 
-    this.tree.mount($(children));
+    this.tree.mount($(null, children));
   };
 
-  handleUnmount = () => {
+  private handleUnmount = () => {
     // document.head tree will be unmounted when Head is unmounted
 
     this.tree.unmount();

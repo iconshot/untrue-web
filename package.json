@@ -1,13 +1,17 @@
 {
   "name": "@untrue/web",
-  "version": "1.5.7",
+  "version": "2.0.0",
   "description": "Web integration for Untrue.",
   "homepage": "https://untrue.dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/iconshot/untrue-web.git"
   },
-  "main": "index.js",
+  "main": "dist/index.js",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc"
+  },
   "keywords": [
     "web",
     "untrue"
@@ -17,6 +21,9 @@
     "crossroads": "^0.12.2"
   },
   "peerDependencies": {
-    "untrue": "^4.7.1"
+    "untrue": "^5.5.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
   }
 }

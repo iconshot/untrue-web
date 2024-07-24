@@ -1,15 +1,15 @@
-import { Component } from "untrue";
+import { Component, Props } from "untrue";
 
 // Scroller will move scrollTop to 0 on every route change
 
-class Scroller extends Component {
-  constructor(props) {
+export class Scroller extends Component {
+  constructor(props: Props) {
     super(props);
 
-    this.on("mount", this.handleMountScroll);
+    this.on("mount", this.handleMount);
   }
 
-  handleMountScroll = () => {
+  private handleMount = () => {
     window.scrollTo(0, 0);
   };
 
@@ -19,5 +19,3 @@ class Scroller extends Component {
     return children;
   }
 }
-
-export default Scroller;
