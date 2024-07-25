@@ -147,7 +147,7 @@ export class Tree {
     const children = slot instanceof Slot ? slot.getChildren() : [];
 
     const edges = children.map(
-      (child) => new Edge(child, edge.depth + 1, edge)
+      (child) => new Edge(child, edge, edge.depth + 1)
     );
 
     edge.children = edges;

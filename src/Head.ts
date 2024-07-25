@@ -1,6 +1,6 @@
 import $, { Component, Props } from "untrue";
 
-import { Tree } from "../Tree/Tree";
+import { Tree } from "./Tree/Tree";
 
 export class Head extends Component {
   private tree: Tree = new Tree(document.head);

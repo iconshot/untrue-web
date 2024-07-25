@@ -8,15 +8,17 @@ import $, {
 
 import crossroads from "crossroads";
 
-import { RouterHistory } from "./RouterHistory";
-
 import { Scroller } from "./Scroller";
 
 export interface Params {}
 
-export interface Route {
+export interface RouteProps<K extends Params = Params> extends Props {
+  route: Route<K>;
+}
+
+interface Route<K extends Params = Params> {
   path: string | null;
-  params: Params;
+  params: K;
 }
 
 interface InternalRoute<K> extends RouterPropsRoute<K> {
@@ -27,8 +29,8 @@ interface RouterPropsRoute<K> {
   path: string | null;
   nested?: boolean;
   Screen: ComponentType | null;
-  Template?: ComponentType;
-  data?: K;
+  Template?: ComponentType | null;
+  props?: K;
   scroll?: boolean;
 }
 
@@ -36,11 +38,39 @@ export interface RouterProps<K> extends Props {
   base?: string;
   routes: RouterPropsRoute<K>[];
   Template?: ComponentType | null;
-  data?: K;
+  props?: K;
   scroll?: boolean;
 }
 
 export class Router {
+  private static initialized = false;
+
+  static init() {
+    if (this.initialized) {
+      return;
+    }
+
+    window.addEventListener("popstate", this.emitLocationChange);
+
+    this.initialized = true;
+  }
+
+  static pushState(data: any, unused: string, url?: string | URL | null) {
+    window.history.pushState(data, unused, url);
+
+    this.emitLocationChange();
+  }
+
+  static replaceState(data: any, unused: string, url?: string | URL | null) {
+    window.history.replaceState(data, unused, url);
+
+    this.emitLocationChange();
+  }
+
+  private static emitLocationChange = () => {
+    window.dispatchEvent(new Event("locationchange"));
+  };
+
   static wrapRouter<K = { [key: string]: any }>(): ClassComponent<
     RouterProps<K>
   > {
@@ -57,7 +87,7 @@ export class Router {
       }
 
       private handleMount = () => {
-        RouterHistory.init();
+        Router.init();
 
         window.addEventListener("locationchange", this.locationListener);
       };
@@ -168,7 +198,7 @@ export class Router {
       }
 
       render() {
-        let { scroll = true, Template = null, data = {} } = this.props;
+        let { scroll = true, Template = null, props = {} } = this.props;
 
         const route = this.parseRoute();
 
@@ -186,8 +216,8 @@ export class Router {
           Template = route.Template;
         }
 
-        if (route.data !== undefined) {
-          data = route.data;
+        if (route.props !== undefined) {
+          props = route.props;
         }
 
         // route
@@ -201,7 +231,7 @@ export class Router {
           $(
             scroll ? Scroller : null,
             { key },
-            $(Screen, { ...data, route: tmpRoute } as any)
+            $(Screen, { ...props, route: tmpRoute } as any)
           )
         );
       }
@@ -238,7 +268,7 @@ export class Router {
     // if urls are different, pushState
 
     if (locationUrl !== elementUrl) {
-      RouterHistory.pushState(null, "", href);
+      Router.pushState(null, "", href);
 
       return false;
     }
@@ -249,7 +279,7 @@ export class Router {
     // if navigating from #hash to no #hash, pushState
 
     if (hasLocationHash && !hasElementHash) {
-      RouterHistory.pushState(null, "", href);
+      Router.pushState(null, "", href);
 
       return false;
     }
