@@ -306,7 +306,7 @@ export class Tree {
     // create the new component or update the current one
 
     if (component === null) {
-      const ComponentClass: ClassComponent = contentType as any;
+      const ComponentClass = contentType as ClassComponent;
 
       component = new ComponentClass(props);
     } else {
@@ -380,7 +380,7 @@ export class Tree {
     const contentType = slot.getContentType();
     const props = slot.getProps();
 
-    const ComponentFunction: FunctionComponent = contentType as any;
+    const ComponentFunction = contentType as FunctionComponent;
 
     const children = ComponentFunction(props);
 
@@ -466,7 +466,7 @@ export class Tree {
     if (slot instanceof Slot) {
       const contentType = slot.getContentType();
 
-      const tagName: string = contentType as any;
+      const tagName = contentType as string;
 
       return document.createElement(tagName);
     } else {

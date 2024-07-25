@@ -6,8 +6,8 @@ export class Edge {
     public readonly parent: Edge | null = null,
     public readonly depth: number = 0,
     public children: Edge[] = [],
-    public node: Node | null = null,
-    public component: Component | null = null
+    public component: Component | null = null,
+    public node: Node | null = null
   ) {}
 
   clone() {
@@ -16,8 +16,8 @@ export class Edge {
       this.parent,
       this.depth,
       this.children,
-      this.node,
-      this.component
+      this.component,
+      this.node
     );
   }
 }
