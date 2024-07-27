@@ -4,6 +4,8 @@ import { Target } from "./Target";
 import { Edge } from "./Edge";
 import { StackItem } from "./StackItem";
 
+import { ErrorHandler } from "../ErrorHandler";
+
 export class Tree {
   private node: Element;
 
@@ -277,9 +279,7 @@ export class Tree {
         this.renderText(edge, currentEdge, target);
       }
     } catch (error) {
-      queueMicrotask(() => {
-        throw error;
-      });
+      ErrorHandler.handle(error);
     }
   }
 
@@ -552,9 +552,7 @@ export class Tree {
                   try {
                     element.setAttribute(key, value);
                   } catch (error) {
-                    queueMicrotask(() => {
-                      throw error;
-                    });
+                    ErrorHandler.handle(error);
                   }
                 }
               }
