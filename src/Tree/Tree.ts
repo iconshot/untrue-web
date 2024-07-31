@@ -458,6 +458,102 @@ export class Tree {
     this.renderChildren(edge, currentEdge, target);
   }
 
+  private unmountEdge(edge: Edge, target: Target | null) {
+    const slot = edge.slot;
+    const node = edge.node;
+    const component = edge.component;
+    const children = edge.children;
+
+    let tmpTarget: Target | null = target;
+
+    /*
+    
+    remove node, if any
+    
+    tmpTarget will then be set to null and will be passed to children's unmountEdge
+    so only the first node in a sub-tree will call remove
+    because once a node is removed, all of its children are removed
+
+    */
+
+    if (node !== null && target !== null) {
+      target.remove(node);
+
+      tmpTarget = null;
+    }
+
+    // update ref
+
+    const ref = slot instanceof Slot ? slot.getRef() : null;
+
+    if (ref instanceof Ref) {
+      ref.current = null;
+    }
+
+    // unmount children
+
+    for (const child of children) {
+      this.unmountEdge(child, tmpTarget);
+    }
+
+    /*
+    
+    unmount component, if any
+
+    this is called at the very end of the method
+    to keep consistency with renderComponent
+
+    deeper components will fire the 'unmount' event first
+
+    */
+
+    if (component !== null) {
+      this.unqueue(edge);
+
+      component.triggerUnmount();
+    }
+  }
+
+  private isEqual(edge: Edge, currentEdge: Edge) {
+    const slot = edge.slot;
+    const currentSlot = currentEdge.slot;
+
+    //  check slots based on type and key
+
+    if (slot instanceof Slot) {
+      if (!(currentSlot instanceof Slot)) {
+        return false;
+      }
+
+      const contentType = slot.getContentType();
+      const key = slot.getKey();
+
+      const currentContentType = currentSlot.getContentType();
+      const currentKey = currentSlot.getKey();
+
+      return contentType === currentContentType && key === currentKey;
+    }
+
+    // null, undefined and false are special cases since they will be ignored by renderEdge
+
+    if (slot === null || slot === undefined || slot === false) {
+      return (
+        currentSlot === null ||
+        currentSlot === undefined ||
+        currentSlot === false
+      );
+    }
+
+    // check if both slots are texts
+
+    return (
+      currentSlot !== null &&
+      currentSlot !== undefined &&
+      currentSlot !== false &&
+      !(currentSlot instanceof Slot)
+    );
+  }
+
   private createNode(edge: Edge): Node {
     // according to the slot type, create an element node or a text node
 
@@ -920,101 +1016,5 @@ export class Tree {
     // no node has been found in the sub-tree
 
     return null;
-  }
-
-  private unmountEdge(edge: Edge, target: Target | null) {
-    const slot = edge.slot;
-    const node = edge.node;
-    const component = edge.component;
-    const children = edge.children;
-
-    let tmpTarget: Target | null = target;
-
-    /*
-    
-    remove node, if any
-    
-    tmpTarget will then be set to null and will be passed to children's unmountEdge
-    so only the first node in a sub-tree will call remove
-    because once a node is removed, all of its children are removed
-
-    */
-
-    if (node !== null && target !== null) {
-      target.remove(node);
-
-      tmpTarget = null;
-    }
-
-    // update ref
-
-    const ref = slot instanceof Slot ? slot.getRef() : null;
-
-    if (ref instanceof Ref) {
-      ref.current = null;
-    }
-
-    // unmount children
-
-    for (const child of children) {
-      this.unmountEdge(child, tmpTarget);
-    }
-
-    /*
-    
-    unmount component, if any
-
-    this is called at the very end of the method
-    to keep consistency with renderComponent
-
-    deeper components will fire the 'unmount' event first
-
-    */
-
-    if (component !== null) {
-      this.unqueue(edge);
-
-      component.triggerUnmount();
-    }
-  }
-
-  private isEqual(edge: Edge, currentEdge: Edge) {
-    const slot = edge.slot;
-    const currentSlot = currentEdge.slot;
-
-    //  check slots based on type and key
-
-    if (slot instanceof Slot) {
-      if (!(currentSlot instanceof Slot)) {
-        return false;
-      }
-
-      const contentType = slot.getContentType();
-      const key = slot.getKey();
-
-      const currentContentType = currentSlot.getContentType();
-      const currentKey = currentSlot.getKey();
-
-      return contentType === currentContentType && key === currentKey;
-    }
-
-    // null, undefined and false are special cases since they will be ignored by renderEdge
-
-    if (slot === null || slot === undefined || slot === false) {
-      return (
-        currentSlot === null ||
-        currentSlot === undefined ||
-        currentSlot === false
-      );
-    }
-
-    // check if both slots are texts
-
-    return (
-      currentSlot !== null &&
-      currentSlot !== undefined &&
-      currentSlot !== false &&
-      !(currentSlot instanceof Slot)
-    );
   }
 }
