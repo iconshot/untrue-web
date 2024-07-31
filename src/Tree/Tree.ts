@@ -629,10 +629,10 @@ export class Tree {
 
   /*
 
-  this method will search for the targetNode inside the edge's previous siblings
+  this method will search for an edge with node inside the edge's previous siblings
   then it will return the right target index used to create a new Target
 
-  if the targetNode is not found in the siblings,
+  if no edge with node is found in the siblings,
   it will search in the parent siblings, creating a recursion
   
   this means it will start with edge but the cursor will be moved up the tree
@@ -787,7 +787,7 @@ export class Tree {
 
     /*
     
-    targetNode hasn't been found among the edge's previous siblings,
+    and edge with node hasn't been found among the edge's previous siblings,
     it's time to start looking in the parent's previous siblings
     
     but first we check for a specific case:
@@ -896,7 +896,9 @@ export class Tree {
     */
 
     if (node !== null) {
-      return [...targetNode.childNodes].indexOf(node as ChildNode);
+      const childNodes = [...targetNode.childNodes];
+
+      return childNodes.indexOf(node as ChildNode);
     }
 
     // loop children from last to first
