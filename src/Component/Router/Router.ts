@@ -45,7 +45,7 @@ export interface RouterProps<K> extends Props {
 export class Router {
   private static initialized = false;
 
-  static init() {
+  static init(): void {
     if (this.initialized) {
       return;
     }
@@ -55,19 +55,23 @@ export class Router {
     this.initialized = true;
   }
 
-  static pushState(data: any, unused: string, url?: string | URL | null) {
+  static pushState(data: any, unused: string, url?: string | URL | null): void {
     window.history.pushState(data, unused, url);
 
     this.emitLocationChange();
   }
 
-  static replaceState(data: any, unused: string, url?: string | URL | null) {
+  static replaceState(
+    data: any,
+    unused: string,
+    url?: string | URL | null
+  ): void {
     window.history.replaceState(data, unused, url);
 
     this.emitLocationChange();
   }
 
-  private static emitLocationChange = () => {
+  private static emitLocationChange = (): void => {
     window.dispatchEvent(new Event("locationchange"));
   };
 
@@ -86,17 +90,17 @@ export class Router {
         this.on("unmount", this.handleUnmount);
       }
 
-      private handleMount = () => {
+      private handleMount = (): void => {
         Router.init();
 
         window.addEventListener("locationchange", this.locationListener);
       };
 
-      private handleUnmount = () => {
+      private handleUnmount = (): void => {
         window.removeEventListener("locationchange", this.locationListener);
       };
 
-      private locationListener = () => {
+      private locationListener = (): void => {
         const locationPath = this.getLocationPath();
 
         // ignore changes like /page?hello=world -> /page?hello=mars
@@ -126,11 +130,11 @@ export class Router {
         this.update();
       };
 
-      private getLocationPath() {
+      private getLocationPath(): string {
         return `/${window.location.pathname.replace(/^\/|\/$/g, "")}`;
       }
 
-      private parseRoute() {
+      private parseRoute(): InternalRoute<K> {
         const { base = "/", routes } = this.props;
 
         const router = crossroads.create();
@@ -141,7 +145,9 @@ export class Router {
 
         // fallback route
 
-        const fallbackRoute = routes.find((tmpRoute) => tmpRoute.path === null);
+        const fallbackRoute = routes.find(
+          (tmpRoute): boolean => tmpRoute.path === null
+        );
 
         if (fallbackRoute !== undefined) {
           route = { ...fallbackRoute, params: {} };
@@ -150,8 +156,8 @@ export class Router {
         // add routes
 
         routes
-          .filter((tmpRoute) => tmpRoute.path !== null)
-          .forEach((tmpRoute) => {
+          .filter((tmpRoute): boolean => tmpRoute.path !== null)
+          .forEach((tmpRoute): void => {
             const { nested = false } = tmpRoute;
 
             let tmpPath = `${base !== "/" ? base : ""}${tmpRoute.path}`;
@@ -160,19 +166,19 @@ export class Router {
               tmpPath += "/:rest*:";
             }
 
-            router.addRoute(tmpPath, (obj = {}) => {
+            router.addRoute(tmpPath, (obj = {}): void => {
               const params = {};
 
               // filter out crossroads properties
 
               Object.keys(obj)
                 .filter(
-                  (key) =>
+                  (key): boolean =>
                     key !== "request_" &&
                     key !== "vals_" &&
                     !Number.isInteger(parseInt(key))
                 )
-                .forEach((key) => {
+                .forEach((key): void => {
                   params[key] = obj[key];
                 });
 
@@ -197,7 +203,7 @@ export class Router {
         return route;
       }
 
-      render() {
+      render(): any {
         let { scroll = true, Template = null, props = {} } = this.props;
 
         const route = this.parseRoute();

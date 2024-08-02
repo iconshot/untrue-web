@@ -10,7 +10,7 @@ export class Edge {
     public node: Node | null = null
   ) {}
 
-  clone() {
+  clone(): Edge {
     return new Edge(
       this.slot,
       this.parent,

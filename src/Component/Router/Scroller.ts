@@ -9,11 +9,11 @@ export class Scroller extends Component {
     this.on("mount", this.handleMount);
   }
 
-  private handleMount = () => {
+  private handleMount = (): void => {
     window.scrollTo(0, 0);
   };
 
-  render() {
+  render(): any {
     const { children } = this.props;
 
     return children;

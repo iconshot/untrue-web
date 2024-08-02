@@ -1,5 +1,5 @@
 export * from "./Tree/Tree";
-export * from "./Router/Router";
-export * from "./Head";
+export * from "./Component/Router/Router";
+export * from "./Component/Head";
 
 export const Storage = window.localStorage;

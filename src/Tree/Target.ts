@@ -1,7 +1,7 @@
 export class Target {
   constructor(public node: Element, public index: number = 0) {}
 
-  insert(child: Node) {
+  insert(child: Node): void {
     // get the currentChild based on this.index, it can be null
 
     const currentChild: Node | null =
@@ -22,7 +22,7 @@ export class Target {
     this.index++;
   }
 
-  remove(child: Node) {
+  remove(child: Node): void {
     this.node.removeChild(child);
   }
 }

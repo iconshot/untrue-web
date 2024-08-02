@@ -7,21 +7,15 @@ import { StackItem } from "./StackItem";
 import { ErrorHandler } from "../ErrorHandler";
 
 export class Tree {
-  private node: Element;
-
   private edge: Edge | null = null;
 
   private stack: StackItem[] = [];
 
   private timeout: number | undefined;
 
-  constructor(node: Element) {
-    // starting target's node
+  constructor(private node: Element) {}
 
-    this.node = node;
-  }
-
-  mount(slot: Slot) {
+  mount(slot: Slot): void {
     // unmount if there is a root edge
 
     if (this.edge !== null) {
@@ -46,7 +40,7 @@ export class Tree {
     this.renderEdge(this.edge, null, target);
   }
 
-  unmount() {
+  unmount(): void {
     // ignore if there is not a root edge
 
     if (this.edge === null) {
@@ -70,7 +64,7 @@ export class Tree {
     clearTimeout(this.timeout);
   }
 
-  private queue(edge: Edge, target: Target) {
+  private queue(edge: Edge, target: Target): void {
     // create new item
 
     const item = new StackItem(edge, target);
@@ -81,18 +75,20 @@ export class Tree {
 
     clearTimeout(this.timeout);
 
-    this.timeout = setTimeout(() => this.rerender());
+    this.timeout = setTimeout((): void => {
+      this.rerender();
+    });
   }
 
-  private unqueue(edge: Edge) {
+  private unqueue(edge: Edge): void {
     // remove edge from the stack
 
     this.stack = this.stack.filter(
-      (item) => item.edge.component !== edge.component
+      (item): boolean => item.edge.component !== edge.component
     );
   }
 
-  private rerender() {
+  private rerender(): void {
     // end the recursion until queue() is called again
 
     if (this.stack.length === 0) {
@@ -101,7 +97,7 @@ export class Tree {
 
     // get a stack item, closer to the root first
 
-    this.stack.sort((a, b) => a.edge.depth - b.edge.depth);
+    this.stack.sort((a, b): number => a.edge.depth - b.edge.depth);
 
     const item = this.stack[0];
 
@@ -143,19 +139,23 @@ export class Tree {
 
   // convert slot.children to Edge objects
 
-  private createChildren(edge: Edge) {
+  private createChildren(edge: Edge): void {
     const slot = edge.slot;
 
     const children = slot instanceof Slot ? slot.getChildren() : [];
 
     const edges = children.map(
-      (child) => new Edge(child, edge, edge.depth + 1)
+      (child): Edge => new Edge(child, edge, edge.depth + 1)
     );
 
     edge.children = edges;
   }
 
-  private renderChildren(edge: Edge, currentEdge: Edge | null, target: Target) {
+  private renderChildren(
+    edge: Edge,
+    currentEdge: Edge | null,
+    target: Target
+  ): void {
     // create the children first
 
     this.createChildren(edge);
@@ -247,7 +247,11 @@ export class Tree {
     }
   }
 
-  private renderEdge(edge: Edge, currentEdge: Edge | null, target: Target) {
+  private renderEdge(
+    edge: Edge,
+    currentEdge: Edge | null,
+    target: Target
+  ): void {
     const slot = edge.slot;
 
     // in case there's an error, edge keeps children from currentEdge
@@ -287,7 +291,7 @@ export class Tree {
     edge: Edge,
     currentEdge: Edge | null,
     target: Target
-  ) {
+  ): void {
     // get slot and currentSlot
 
     const slot: Slot = edge.slot;
@@ -369,12 +373,16 @@ export class Tree {
 
     */
 
-    component.triggerRender(() => {
+    component.triggerRender((): void => {
       this.queue(edge, target);
     });
   }
 
-  private renderFunction(edge: Edge, currentEdge: Edge | null, target: Target) {
+  private renderFunction(
+    edge: Edge,
+    currentEdge: Edge | null,
+    target: Target
+  ): void {
     const slot: Slot = edge.slot;
 
     const contentType = slot.getContentType();
@@ -396,7 +404,11 @@ export class Tree {
     this.renderChildren(edge, currentEdge, target);
   }
 
-  private renderElement(edge: Edge, currentEdge: Edge | null, target: Target) {
+  private renderElement(
+    edge: Edge,
+    currentEdge: Edge | null,
+    target: Target
+  ): void {
     // node will be an element node
 
     let node = currentEdge?.node ?? null;
@@ -434,7 +446,11 @@ export class Tree {
     target.insert(node);
   }
 
-  private renderText(edge: Edge, currentEdge: Edge | null, target: Target) {
+  private renderText(
+    edge: Edge,
+    currentEdge: Edge | null,
+    target: Target
+  ): void {
     // node will be a text node
 
     let node = currentEdge?.node ?? null;
@@ -452,13 +468,17 @@ export class Tree {
     // text nodes are leafs, so no need for renderChildren()
   }
 
-  private renderNull(edge: Edge, currentEdge: Edge | null, target: Target) {
+  private renderNull(
+    edge: Edge,
+    currentEdge: Edge | null,
+    target: Target
+  ): void {
     // if slot type is null, we do nothing but loop through its children
 
     this.renderChildren(edge, currentEdge, target);
   }
 
-  private unmountEdge(edge: Edge, target: Target | null) {
+  private unmountEdge(edge: Edge, target: Target | null): void {
     const slot = edge.slot;
     const node = edge.node;
     const component = edge.component;
@@ -514,7 +534,7 @@ export class Tree {
     }
   }
 
-  private isEqual(edge: Edge, currentEdge: Edge) {
+  private isEqual(edge: Edge, currentEdge: Edge): boolean {
     const slot = edge.slot;
     const currentSlot = currentEdge.slot;
 
@@ -570,7 +590,7 @@ export class Tree {
     }
   }
 
-  private patchNode(edge: Edge, currentEdge: Edge | null) {
+  private patchNode(edge: Edge, currentEdge: Edge | null): void {
     const slot = edge.slot;
     const node = edge.node!;
 
@@ -633,7 +653,7 @@ export class Tree {
                 if (value !== currentValue) {
                   const handler = value;
 
-                  element[key] = (...args: any[]) => {
+                  element[key] = (...args: any[]): any => {
                     return handler(...args, element);
                   };
                 }
