@@ -484,7 +484,7 @@ export class Tree {
     const component = edge.component;
     const children = edge.children;
 
-    let tmpTarget: Target | null = target;
+    let tmpTarget = target;
 
     /*
     
