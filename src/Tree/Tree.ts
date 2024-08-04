@@ -478,7 +478,7 @@ export class Tree {
     this.renderChildren(edge, currentEdge, target);
   }
 
-  private unmountEdge(edge: Edge, target: Target | null): void {
+  private unmountEdge(edge: Edge, target: Target): void {
     const slot = edge.slot;
     const node = edge.node;
     const component = edge.component;
@@ -489,17 +489,35 @@ export class Tree {
     /*
     
     remove node, if any
-    
-    tmpTarget will then be set to null and will be passed to children's unmountEdge
-    so only the first node in a sub-tree will call remove
-    because once a node is removed, all of its children are removed
+
+    ghost trees are trees that never call unmount()
+
+    it's recommended to always call unmount when the tree
+    is no longer visible in the dom, for example
+    when the component that created the tree
+    gets an "unmount" event
+
+    but ghost trees could be useful too,
+    hence this optimization:
+
+    new tmpTarget is needed for every element slot
+    so in case there's a ghost tree, tree.node has no parent
+    and unmounted elements get freed from memory
+
+    this approach has another advantage:
+    when an event is dispatched in a ghost tree element,
+    which is very rare but could happen,
+    the event is bubbled up to tree.node only
+    and it doesn't reach unmounted elements
 
     */
 
-    if (node !== null && target !== null) {
+    if (node !== null) {
       target.remove(node);
 
-      tmpTarget = null;
+      if (slot instanceof Slot && slot.isElement()) {
+        tmpTarget = new Target(node as Element);
+      }
     }
 
     // update ref
