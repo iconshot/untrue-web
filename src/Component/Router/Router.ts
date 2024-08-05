@@ -252,7 +252,7 @@ export class Router {
   
     */
 
-    const element = event.target as HTMLAnchorElement;
+    const element = event.currentTarget as HTMLAnchorElement;
 
     const href = element.href;
     const target = element.target;
