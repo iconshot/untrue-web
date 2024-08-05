@@ -1,6 +1,6 @@
 {
   "name": "@untrue/web",
-  "version": "2.1.10",
+  "version": "2.1.11",
   "description": "Web integration for Untrue.",
   "homepage": "https://untrue.dev",
   "repository": {
@@ -21,7 +21,7 @@
     "crossroads": "^0.12.2"
   },
   "peerDependencies": {
-    "untrue": "^5.5.6"
+    "untrue": "^5.5.7"
   },
   "devDependencies": {
     "typescript": "^5.5.4"
