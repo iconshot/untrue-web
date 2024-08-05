@@ -627,10 +627,8 @@ export class Tree {
       // loop through attributes
 
       for (const key in attributes) {
-        const { [key]: value = null } = attributes;
-
-        const { [key]: currentValue = null } =
-          key in currentAttributes ? currentAttributes : {};
+        const value = attributes[key] ?? null;
+        const currentValue = currentAttributes[key] ?? null;
 
         switch (key) {
           case "key": {
@@ -662,21 +660,19 @@ export class Tree {
               // we have an attribute
 
               if (isValueHandler) {
-                // set the element's handler
+                // set element's handler
+
+                const handler = value;
 
                 if (currentValue !== null && !isCurrentValueHandler) {
                   element.removeAttribute(key);
                 }
 
                 if (value !== currentValue) {
-                  const handler = value;
-
-                  element[key] = (...args: any[]): any => {
-                    return handler(...args, element);
-                  };
+                  element[key] = handler;
                 }
               } else {
-                // set the element's attribute
+                // set element's attribute
 
                 if (currentValue !== null && isCurrentValueHandler) {
                   element[key] = null;
@@ -712,7 +708,7 @@ export class Tree {
       // loop through currentAttributes
 
       for (const key in currentAttributes) {
-        // ignore if key not found in attributes
+        // ignore if key found in attributes
 
         const found = key in attributes;
 
@@ -720,7 +716,7 @@ export class Tree {
           continue;
         }
 
-        const currentValue = currentAttributes[key];
+        const currentValue = currentAttributes[key] ?? null;
 
         switch (key) {
           case "ref": {
@@ -734,14 +730,16 @@ export class Tree {
           }
 
           default: {
-            // delete element's handler or attribute
-
             const isCurrentValueHandler = typeof currentValue === "function";
 
-            if (isCurrentValueHandler) {
-              element[key] = null;
-            } else {
-              element.removeAttribute(key);
+            if (currentValue !== null) {
+              // delete element's handler or attribute
+
+              if (isCurrentValueHandler) {
+                element[key] = null;
+              } else {
+                element.removeAttribute(key);
+              }
             }
           }
         }

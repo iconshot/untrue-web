@@ -244,13 +244,15 @@ export class Router {
     };
   }
 
-  static onClick = (event: MouseEvent, element: HTMLAnchorElement): boolean => {
+  static onClick = (event: MouseEvent): boolean => {
     /*
     
     return true means the click event will be handled by the browser
     return false means the click event won't be handled by the browser
   
     */
+
+    const element = event.target as HTMLAnchorElement;
 
     const href = element.href;
     const target = element.target;
