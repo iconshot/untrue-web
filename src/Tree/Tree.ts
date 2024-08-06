@@ -662,14 +662,12 @@ export class Tree {
               if (isValueHandler) {
                 // set element's handler
 
-                const handler = value;
-
                 if (currentValue !== null && !isCurrentValueHandler) {
                   element.removeAttribute(key);
                 }
 
                 if (value !== currentValue) {
-                  element[key] = handler;
+                  element[key] = value;
                 }
               } else {
                 // set element's attribute
