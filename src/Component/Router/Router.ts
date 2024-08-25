@@ -45,23 +45,29 @@ export interface RouterProps<K> extends Props {
 export class Router {
   private static initialized = false;
 
-  static init(): void {
+  public static init(): void {
     if (this.initialized) {
       return;
     }
 
-    window.addEventListener("popstate", this.emitLocationChange);
+    window.addEventListener("popstate", (): void => {
+      this.emitLocationChange();
+    });
 
     this.initialized = true;
   }
 
-  static pushState(data: any, unused: string, url?: string | URL | null): void {
+  public static pushState(
+    data: any,
+    unused: string,
+    url?: string | URL | null
+  ): void {
     window.history.pushState(data, unused, url);
 
     this.emitLocationChange();
   }
 
-  static replaceState(
+  public static replaceState(
     data: any,
     unused: string,
     url?: string | URL | null
@@ -71,11 +77,11 @@ export class Router {
     this.emitLocationChange();
   }
 
-  private static emitLocationChange = (): void => {
+  private static emitLocationChange(): void {
     window.dispatchEvent(new Event("locationchange"));
-  };
+  }
 
-  static wrapRouter<K = { [key: string]: any }>(): ClassComponent<
+  public static wrapRouter<K = { [key: string]: any }>(): ClassComponent<
     RouterProps<K>
   > {
     return class RouterWrapper extends Component<RouterProps<K>> {
@@ -83,52 +89,45 @@ export class Router {
 
       private route: InternalRoute<K> | null = null;
 
-      constructor(props: RouterProps<K>) {
-        super(props);
+      init(): void {
+        const listener = (): void => {
+          const locationPath = this.getLocationPath();
 
-        this.on("mount", this.handleMount);
-        this.on("unmount", this.handleUnmount);
-      }
+          // ignore changes like /page?hello=world -> /page?hello=mars
 
-      private handleMount = (): void => {
-        Router.init();
-
-        window.addEventListener("locationchange", this.locationListener);
-      };
-
-      private handleUnmount = (): void => {
-        window.removeEventListener("locationchange", this.locationListener);
-      };
-
-      private locationListener = (): void => {
-        const locationPath = this.getLocationPath();
-
-        // ignore changes like /page?hello=world -> /page?hello=mars
-
-        if (locationPath === this.locationPath) {
-          return;
-        }
-
-        const route = this.parseRoute();
-
-        // ignore same path and params
-
-        if (this.route !== null) {
-          const { path, params } = route;
-
-          const { path: currentPath, params: currentParams } = this.route;
-
-          const equal =
-            Comparer.compare(path, currentPath) &&
-            Comparer.compare(params, currentParams);
-
-          if (equal) {
+          if (locationPath === this.locationPath) {
             return;
           }
-        }
 
-        this.update();
-      };
+          const route = this.parseRoute();
+
+          // ignore same path and params
+
+          if (this.route !== null) {
+            const { path, params } = route;
+
+            const { path: currentPath, params: currentParams } = this.route;
+
+            const equal =
+              Comparer.compare(path, currentPath) &&
+              Comparer.compare(params, currentParams);
+
+            if (equal) {
+              return;
+            }
+          }
+
+          this.update();
+        };
+
+        this.on("mount", (): void => {
+          window.addEventListener("locationchange", listener);
+        });
+
+        this.on("unmount", (): void => {
+          window.removeEventListener("locationchange", listener);
+        });
+      }
 
       private getLocationPath(): string {
         return `/${window.location.pathname.replace(/^\/|\/$/g, "")}`;
@@ -297,3 +296,5 @@ export class Router {
     return hasElementHash;
   };
 }
+
+Router.init();

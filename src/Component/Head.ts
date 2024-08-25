@@ -1,35 +1,30 @@
-import $, { Component, Props } from "untrue";
+import $, { Component } from "untrue";
 
 import { Tree } from "../Tree/Tree";
 
 export class Head extends Component {
-  private tree: Tree = new Tree(document.head);
+  init(): void {
+    let tree: Tree = new Tree(document.head);
 
-  constructor(props: Props) {
-    super(props);
+    this.on("render", (): void => {
+      /*
+      
+      the new document.head tree will be mounted on every "render",
+      this way we handle "mount" and "update" events
+  
+      */
 
-    this.on("render", this.handleRender);
-    this.on("unmount", this.handleUnmount);
+      const { children } = this.props;
+
+      tree.mount($(null, children));
+    });
+
+    this.on("unmount", (): void => {
+      // document.head tree will be unmounted when Head is unmounted
+
+      tree.unmount();
+    });
   }
-
-  private handleRender = (): void => {
-    /*
-    
-    the new document.head tree will be mounted on every "render",
-    this way we handle "mount" and "update" events
-
-    */
-
-    const { children } = this.props;
-
-    this.tree.mount($(null, children));
-  };
-
-  private handleUnmount = (): void => {
-    // document.head tree will be unmounted when Head is unmounted
-
-    this.tree.unmount();
-  };
 }
 
 export default Head;
