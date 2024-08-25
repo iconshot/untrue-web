@@ -313,6 +313,8 @@ export class Tree {
       const ComponentClass = contentType as ClassComponent;
 
       component = new ComponentClass(props);
+
+      component.init();
     } else {
       component.updateProps(props);
     }
