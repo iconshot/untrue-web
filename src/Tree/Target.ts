@@ -1,5 +1,5 @@
 export class Target {
-  constructor(public node: Element, public index: number = 0) {}
+  constructor(public readonly node: Element, public index: number = 0) {}
 
   insert(child: Node): void {
     // get the currentChild based on this.index, it can be null

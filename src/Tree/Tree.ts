@@ -64,10 +64,10 @@ export class Tree {
     clearTimeout(this.timeout);
   }
 
-  private queue(edge: Edge, target: Target): void {
+  private queue(edge: Edge, node: Element): void {
     // create new item
 
-    const item = new StackItem(edge, target);
+    const item = new StackItem(edge, node);
 
     this.stack.push(item);
 
@@ -102,7 +102,8 @@ export class Tree {
     const item = this.stack[0];
 
     const edge = item.edge;
-    const target = item.target;
+    const node = item.node;
+
     /*
     
     clone edge to use with renderEdge
@@ -117,20 +118,20 @@ export class Tree {
 
     /*
     
-    targetIndex means where we should start inserting DOM nodes inside target.node
+    targetIndex means where we should start inserting DOM nodes inside node
     
     we need to search for it in every rerender
-    because a sibling component could remove/add DOM nodes from target.node any time
+    because a sibling component could remove/add DOM nodes from node any time
 
     */
 
-    const targetIndex = this.findTargetIndex(edge, target.node);
+    const index = this.findTargetIndex(edge, node);
 
-    const tmpTarget = new Target(target.node, targetIndex);
+    const target = new Target(node, index);
 
     // rerender component
 
-    this.renderEdge(edge, currentEdge, tmpTarget);
+    this.renderEdge(edge, currentEdge, target);
 
     // call again to rerender remaining components
 
@@ -373,10 +374,18 @@ export class Tree {
     the handler passed to triggerRender will be used
     when there's a "rerender" event fired in the component
 
+    every time renderComponent is reached from the parent,
+    edge will be brand new and it's this new edge the one
+    that will carry the new slot (with new props)
+    and the new sub-tree from component.render(),
+    so we want to use this new edge in every "rerender" event
+
+    for a single component, target.node is always the same
+
     */
 
     component.triggerRender((): void => {
-      this.queue(edge, target);
+      this.queue(edge, target.node);
     });
   }
 
