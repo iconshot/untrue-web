@@ -1,4 +1,4 @@
-import { Slot, Ref, ClassComponent, FunctionComponent } from "untrue";
+import { Slot, Ref, Hookster, ClassComponent, FunctionComponent } from "untrue";
 
 import { Target } from "./Target";
 import { Edge } from "./Edge";
@@ -81,11 +81,26 @@ export class Tree {
   }
 
   private unqueue(edge: Edge): void {
-    // remove edge from the stack
+    // remove edge from the stack based on its component/hookster
 
-    this.stack = this.stack.filter(
-      (item): boolean => item.edge.component !== edge.component
-    );
+    this.stack = this.stack.filter((item): boolean => {
+      if (edge.component !== null) {
+        return item.edge.component !== edge.component;
+      }
+
+      if (edge.hookster !== null) {
+        return item.edge.hookster !== edge.hookster;
+      }
+
+      /*
+
+      unqueue is only called in case it's component or hookster
+      this next line is there only to return a boolean
+
+      */
+
+      return true;
+    });
   }
 
   private rerender(): void {
@@ -399,9 +414,23 @@ export class Tree {
     const contentType = slot.getContentType();
     const props = slot.getProps();
 
+    let hookster = currentEdge?.hookster ?? null;
+
+    if (hookster === null) {
+      hookster = new Hookster();
+    }
+
+    edge.hookster = hookster;
+
+    this.unqueue(edge);
+
+    hookster.activate();
+
     const ComponentFunction = contentType as FunctionComponent;
 
     const children = ComponentFunction(props);
+
+    hookster.deactivate();
 
     /*
       
@@ -413,6 +442,10 @@ export class Tree {
     slot.setChildren(children);
 
     this.renderChildren(edge, currentEdge, target);
+
+    hookster.hook((): void => {
+      this.queue(edge, target.node);
+    });
   }
 
   private renderElement(
@@ -493,6 +526,7 @@ export class Tree {
     const slot = edge.slot;
     const node = edge.node;
     const component = edge.component;
+    const hookster = edge.hookster;
     const children = edge.children;
 
     let tmpTarget = target;
@@ -547,12 +581,11 @@ export class Tree {
 
     /*
     
-    unmount component, if any
+    unmount component or unhook hookster
 
     this is called at the very end of the method
-    to keep consistency with renderComponent
-
-    deeper components will fire the 'unmount' event first
+    to keep consistency with renderComponent/renderFunction:
+    deeper components will reach triggerUnmount/unhook first
 
     */
 
@@ -560,6 +593,12 @@ export class Tree {
       this.unqueue(edge);
 
       component.triggerUnmount();
+    }
+
+    if (hookster !== null) {
+      this.unqueue(edge);
+
+      hookster.unhook();
     }
   }
 

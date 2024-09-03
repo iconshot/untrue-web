@@ -1,4 +1,4 @@
-import { Component } from "untrue";
+import { Component, Hookster } from "untrue";
 
 export class Edge {
   constructor(
@@ -7,6 +7,7 @@ export class Edge {
     public readonly depth: number = 0,
     public children: Edge[] = [],
     public component: Component | null = null,
+    public hookster: Hookster | null = null,
     public node: Node | null = null
   ) {}
 
@@ -17,6 +18,7 @@ export class Edge {
       this.depth,
       this.children,
       this.component,
+      this.hookster,
       this.node
     );
   }
