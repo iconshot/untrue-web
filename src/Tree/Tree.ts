@@ -286,8 +286,8 @@ export class Tree {
 
     try {
       if (slot instanceof Slot) {
-        if (slot.isComponent()) {
-          this.renderComponent(edge, currentEdge, target);
+        if (slot.isClass()) {
+          this.renderClass(edge, currentEdge, target);
         } else if (slot.isFunction()) {
           this.renderFunction(edge, currentEdge, target);
         } else if (slot.isElement()) {
@@ -303,7 +303,7 @@ export class Tree {
     }
   }
 
-  private renderComponent(
+  private renderClass(
     edge: Edge,
     currentEdge: Edge | null,
     target: Target
@@ -389,7 +389,7 @@ export class Tree {
     the handler passed to triggerRender will be used
     when there's a "rerender" event fired in the component
 
-    every time renderComponent is reached from the parent,
+    every time renderClass is reached from the parent,
     edge will be brand new and it's this new edge the one
     that will carry the new slot (with new props)
     and the new sub-tree from component.render(),
@@ -434,7 +434,7 @@ export class Tree {
 
     /*
       
-    same as with the renderComponent, we call slot.setChildren() and then renderChildren()
+    same as with the renderClass, we call slot.setChildren() and then renderChildren()
     while keeping the current sub-tree inside currentEdge
       
     */
@@ -584,7 +584,7 @@ export class Tree {
     unmount component or unhook hookster
 
     this is called at the very end of the method
-    to keep consistency with renderComponent/renderFunction:
+    to keep consistency with renderClass/renderFunction:
     deeper components will reach triggerUnmount/unhook first
 
     */

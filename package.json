@@ -1,6 +1,6 @@
 {
   "name": "@untrue/web",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "Web integration for Untrue.",
   "homepage": "https://untrue.dev",
   "repository": {
@@ -10,7 +10,8 @@
   "main": "dist/index.js",
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc"
+    "build": "npm run clean && tsc",
+    "prepare": "npm run build"
   },
   "keywords": [
     "web",
@@ -21,7 +22,7 @@
     "crossroads": "^0.12.2"
   },
   "peerDependencies": {
-    "untrue": "^5.7.0"
+    "untrue": "^5.8.0"
   },
   "devDependencies": {
     "typescript": "^5.5.4"
