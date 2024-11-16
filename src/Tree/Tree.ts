@@ -350,11 +350,11 @@ export class Tree {
     const currentRef = currentSlot?.getRef() ?? null;
 
     if (currentRef instanceof Ref && currentRef !== ref) {
-      currentRef.current = null;
+      currentRef.value = null;
     }
 
     if (ref instanceof Ref && ref !== currentRef) {
-      ref.current = component;
+      ref.value = component;
     }
 
     // now it's safe to get component's new content
@@ -411,6 +411,8 @@ export class Tree {
   ): void {
     const slot: Slot = edge.slot;
 
+    const currentSlot: Slot | null = currentEdge?.slot ?? null;
+
     const contentType = slot.getContentType();
     const props = slot.getProps();
 
@@ -418,6 +420,8 @@ export class Tree {
 
     if (hookster === null) {
       hookster = new Hookster();
+    } else {
+      hookster.performUpdate();
     }
 
     edge.hookster = hookster;
@@ -426,14 +430,16 @@ export class Tree {
 
     hookster.activate();
 
+    const currentProps = currentSlot?.getProps() ?? null;
+
     const ComponentFunction = contentType as FunctionComponent;
 
-    const children = ComponentFunction(props);
+    const children = ComponentFunction(props, currentProps);
 
     hookster.deactivate();
 
     /*
-      
+    
     same as with the renderClass, we call slot.setChildren() and then renderChildren()
     while keeping the current sub-tree inside currentEdge
       
@@ -443,7 +449,7 @@ export class Tree {
 
     this.renderChildren(edge, currentEdge, target);
 
-    hookster.hook((): void => {
+    hookster.triggerRender((): void => {
       this.queue(edge, target.node);
     });
   }
@@ -570,7 +576,7 @@ export class Tree {
     const ref = slot instanceof Slot ? slot.getRef() : null;
 
     if (ref instanceof Ref) {
-      ref.current = null;
+      ref.value = null;
     }
 
     // unmount children
@@ -581,11 +587,11 @@ export class Tree {
 
     /*
     
-    unmount component or unhook hookster
+    unmount component or hookster
 
     this is called at the very end of the method
     to keep consistency with renderClass/renderFunction:
-    deeper components will reach triggerUnmount/unhook first
+    deeper components will reach triggerUnmount first
 
     */
 
@@ -598,7 +604,7 @@ export class Tree {
     if (hookster !== null) {
       this.unqueue(edge);
 
-      hookster.unhook();
+      hookster.triggerUnmount();
     }
   }
 
@@ -692,11 +698,11 @@ export class Tree {
             // update ref and currentRef
 
             if (currentRef instanceof Ref && currentRef !== ref) {
-              currentRef.current = null;
+              currentRef.value = null;
             }
 
             if (ref instanceof Ref && ref !== currentRef) {
-              ref.current = element;
+              ref.value = element;
             }
 
             break;
@@ -773,7 +779,7 @@ export class Tree {
             const currentRef = currentValue;
 
             if (currentRef instanceof Ref) {
-              currentRef.current = null;
+              currentRef.value = null;
             }
           }
 

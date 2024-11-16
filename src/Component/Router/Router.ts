@@ -89,7 +89,7 @@ export class Router {
 
       private route: InternalRoute<K> | null = null;
 
-      init(): void {
+      public init(): void {
         const listener = (): void => {
           const locationPath = this.getLocationPath();
 
@@ -202,7 +202,7 @@ export class Router {
         return route;
       }
 
-      render(): any {
+      public render(): any {
         let { scroll = true, Template = null, props = {} } = this.props;
 
         const route = this.parseRoute();
