@@ -1,21 +1,27 @@
-import { Slot, Ref, Hookster, ClassComponent, FunctionComponent } from "untrue";
+import {
+  Slot,
+  Ref,
+  Hookster,
+  ClassComponent,
+  FunctionComponent,
+  Comparer,
+} from "untrue";
 
 import { Target } from "./Target";
 import { Edge } from "./Edge";
-import { StackItem } from "./StackItem";
 
 import { ErrorHandler } from "../ErrorHandler";
 
 export class Tree {
   private edge: Edge | null = null;
 
-  private stack: StackItem[] = [];
+  private stack: Edge[] = [];
 
   private timeout: number | undefined;
 
-  constructor(private node: Element) {}
+  constructor(private element: Element) {}
 
-  mount(slot: Slot): void {
+  public mount(slot: Slot): void {
     // unmount if there is a root edge
 
     if (this.edge !== null) {
@@ -24,7 +30,7 @@ export class Tree {
 
     // create starting target
 
-    const target = new Target(this.node);
+    const target = new Target(this.element);
 
     /*
     
@@ -40,7 +46,7 @@ export class Tree {
     this.renderEdge(this.edge, null, target);
   }
 
-  unmount(): void {
+  public unmount(): void {
     // ignore if there is not a root edge
 
     if (this.edge === null) {
@@ -49,7 +55,7 @@ export class Tree {
 
     // create starting target
 
-    const target = new Target(this.node);
+    const target = new Target(this.element);
 
     // start the unmounting
 
@@ -64,12 +70,10 @@ export class Tree {
     clearTimeout(this.timeout);
   }
 
-  private queue(edge: Edge, node: Element): void {
-    // create new item
+  // add edge to the stack
 
-    const item = new StackItem(edge, node);
-
-    this.stack.push(item);
+  private queue(edge: Edge): void {
+    this.stack.push(edge);
 
     // this allows to batch multiple components being updated at the same time
 
@@ -80,27 +84,10 @@ export class Tree {
     });
   }
 
+  // remove edge from the stack
+
   private unqueue(edge: Edge): void {
-    // remove edge from the stack based on its component/hookster
-
-    this.stack = this.stack.filter((item): boolean => {
-      if (edge.component !== null) {
-        return item.edge.component !== edge.component;
-      }
-
-      if (edge.hookster !== null) {
-        return item.edge.hookster !== edge.hookster;
-      }
-
-      /*
-
-      unqueue is only called in case it's component or hookster
-      this next line is there only to return a boolean
-
-      */
-
-      return true;
-    });
+    this.stack = this.stack.filter((tmpEdge): boolean => tmpEdge !== edge);
   }
 
   private rerender(): void {
@@ -110,113 +97,137 @@ export class Tree {
       return;
     }
 
-    // get a stack item, closer to the root first
+    // get a stack edge, closer to the root first
 
-    this.stack.sort((a, b): number => a.edge.depth - b.edge.depth);
+    this.stack.sort((a, b): number => a.depth - b.depth);
 
-    const item = this.stack[0];
+    const edge = this.stack[0];
 
-    const edge = item.edge;
-    const node = item.node;
+    const target = this.createTarget(edge);
 
     /*
     
     clone edge to use with renderEdge
-    
-    the clone will have the references to current components and DOM nodes
-    and the overall current sub-tree
+
+    the clone will have the references to previous components and DOM nodes
+    and the overall previous sub-tree
     while edge will be updated inside renderEdge
-    
-    */
-
-    const currentEdge = edge.clone();
-
-    /*
-    
-    targetIndex means where we should start inserting DOM nodes inside node
-    
-    we need to search for it in every rerender
-    because a sibling component could remove/add DOM nodes from node any time
 
     */
 
-    const index = this.findTargetIndex(edge, node);
-
-    const target = new Target(node, index);
+    const prevEdge = edge.clone();
 
     // rerender component
 
-    this.renderEdge(edge, currentEdge, target);
+    this.renderEdge(edge, prevEdge, target);
+
+    // if there's a new targetNodesCount, propagate the difference
+
+    const difference = edge.targetNodesCount - prevEdge.targetNodesCount;
+
+    if (difference !== 0) {
+      this.propagateTargetNodesCountDifference(edge, difference);
+    }
 
     // call again to rerender remaining components
 
     this.rerender();
   }
 
-  // convert slot.children to Edge objects
+  private propagateTargetNodesCountDifference(
+    edge: Edge,
+    difference: number
+  ): void {
+    const parent = edge.parent;
 
-  private createChildren(edge: Edge): void {
-    const slot = edge.slot;
+    if (parent === null) {
+      return;
+    }
 
-    const children = slot instanceof Slot ? slot.getChildren() : [];
+    const node = parent.node;
 
-    const edges = children.map(
-      (child): Edge => new Edge(child, edge, edge.depth + 1)
-    );
+    if (node !== null) {
+      return;
+    }
 
-    edge.children = edges;
+    parent.targetNodesCount += difference;
+
+    this.propagateTargetNodesCountDifference(parent, difference);
   }
 
   private renderChildren(
     edge: Edge,
-    currentEdge: Edge | null,
+    prevEdge: Edge | null,
     target: Target
   ): void {
-    // create the children first
+    const children: Edge[] = [];
+    const prevChildren: (Edge | null)[] = [];
 
-    this.createChildren(edge);
+    const toMoveChildren: Edge[] = [];
 
-    // children will be an array of Edge objects
+    const slot: Slot = edge.slot;
 
-    const children = edge.children;
+    const slots = slot.getChildren();
 
-    const currentChildren = currentEdge?.children ?? [];
+    const prevSlots = prevEdge?.children.map((child): any => child.slot) ?? [];
 
-    // unmount loop
-
-    for (let i = 0; i < currentChildren.length; i++) {
-      const currentChild = currentChildren[i];
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
 
       let child: Edge | null = null;
+      let prevChild: Edge | null = null;
 
-      const currentSlot = currentChild.slot;
+      if (slot instanceof Slot && slot.getKey() !== null) {
+        // set child as equal previous child (based on type and key)
 
-      // set child as equal child (based on type and key)
+        for (let j = 0; j < prevSlots.length; j++) {
+          const prevSlot = prevSlots[j];
 
-      if (currentSlot instanceof Slot && currentSlot.getKey() !== null) {
-        for (const tmpChild of children) {
-          if (this.isEqual(currentChild, tmpChild)) {
-            child = tmpChild;
+          if (this.isEqual(slot, prevSlot)) {
+            child = prevEdge!.children[j];
+
+            if (j !== i) {
+              toMoveChildren.push(child);
+            }
 
             break;
           }
         }
-      }
+      } else if (i < prevSlots.length) {
+        // set child as same index previous child (only if they're equal)
 
-      // if child is null, set child as same index child (only if they're equal)
+        const prevSlot = prevSlots[i];
 
-      if (child === null && i < children.length) {
-        const tmpChild = children[i];
-
-        if (this.isEqual(currentChild, tmpChild)) {
-          child = tmpChild;
+        if (this.isEqual(slot, prevSlot)) {
+          child = prevEdge!.children[i];
         }
       }
 
-      // if no equal child has been found, unmount currentChild
+      // prepare child
 
       if (child === null) {
-        this.unmountEdge(currentChild, target);
+        child = new Edge(slot, edge.depth + 1, edge);
+      } else {
+        prevChild = child.clone();
+
+        child.slot = slot;
+      }
+
+      children.push(child);
+      prevChildren.push(prevChild);
+    }
+
+    edge.children = children;
+
+    // unmount loop
+
+    if (prevEdge !== null) {
+      for (const prevChild of prevEdge.children) {
+        const shouldBeUnmounted = !children.includes(prevChild);
+
+        if (shouldBeUnmounted) {
+          this.unmountEdge(prevChild, target);
+        }
       }
     }
 
@@ -224,244 +235,236 @@ export class Tree {
 
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
+      const prevChild = prevChildren[i];
 
-      let currentChild: Edge | null = null;
+      const shouldBeMoved = toMoveChildren.includes(child);
 
-      const slot = child.slot;
+      if (shouldBeMoved) {
+        const tmpTarget = new Target(target.element, target.index);
 
-      // set currentChild as equal current child (based on type and key)
-
-      if (slot instanceof Slot && slot.getKey() !== null) {
-        for (const tmpChild of currentChildren) {
-          if (this.isEqual(child, tmpChild)) {
-            currentChild = tmpChild;
-
-            break;
-          }
-        }
+        this.moveEdge(child, tmpTarget);
       }
 
-      // if currentChild is null, set currentChild as same index current child (only if they're equal)
-
-      if (currentChild === null && i < currentChildren.length) {
-        const tmpChild = currentChildren[i];
-
-        if (this.isEqual(child, tmpChild)) {
-          currentChild = tmpChild;
-        }
-      }
-
-      /*
-      
-      render child
-
-      currentChild will have the references to the current sub-tree
-
-      */
-
-      this.renderEdge(child, currentChild, target);
+      this.renderEdge(child, prevChild, target);
     }
   }
 
-  private renderEdge(
-    edge: Edge,
-    currentEdge: Edge | null,
-    target: Target
-  ): void {
-    const slot = edge.slot;
+  private moveEdge(edge: Edge, target: Target): void {
+    const node = edge.node;
+    const children = edge.children;
 
-    // in case there's an error, edge keeps children from currentEdge
+    if (node !== null) {
+      target.insert(node);
 
-    if (currentEdge !== null) {
-      edge.children = currentEdge.children;
+      return;
     }
 
-    /*
+    for (const child of children) {
+      this.moveEdge(child, target);
+    }
+  }
 
-    check type of slot and call the right render method
+  /*
 
-    null, undefined and false values are ignored
+  check type of slot and call the right render method
 
-    */
+  class/function components may be skipped if they have no updates
+
+  null, undefined and false values are ignored
+
+  */
+
+  private renderEdge(edge: Edge, prevEdge: Edge | null, target: Target): void {
+    if (edge.component !== null || edge.hookster !== null) {
+      this.unqueue(edge);
+    }
+
+    if (prevEdge !== null && edge.slot instanceof Slot) {
+      const slot = edge.slot as Slot;
+      const prevSlot = prevEdge.slot as Slot;
+
+      if (slot.isClass() || slot.isFunction()) {
+        let equal = false;
+
+        if (slot.isClass()) {
+          equal = !edge.component!.needsUpdate();
+        }
+
+        if (slot.isFunction()) {
+          equal = !edge.hookster!.needsUpdate();
+        }
+
+        if (equal) {
+          equal = Comparer.compare(slot, prevSlot);
+        }
+
+        if (equal) {
+          target.index += edge.targetNodesCount;
+
+          return;
+        }
+      }
+    }
+
+    const slot = edge.slot;
+
+    const initialTargetIndex = target.index;
 
     try {
       if (slot instanceof Slot) {
         if (slot.isClass()) {
-          this.renderClass(edge, currentEdge, target);
+          this.renderClass(edge, prevEdge, target);
         } else if (slot.isFunction()) {
-          this.renderFunction(edge, currentEdge, target);
+          this.renderFunction(edge, prevEdge, target);
         } else if (slot.isElement()) {
-          this.renderElement(edge, currentEdge, target);
+          this.renderElement(edge, prevEdge, target);
         } else if (slot.isNull()) {
-          this.renderNull(edge, currentEdge, target);
+          this.renderNull(edge, prevEdge, target);
         }
       } else if (slot !== null && slot !== undefined && slot !== false) {
-        this.renderText(edge, currentEdge, target);
+        this.renderText(edge, prevEdge, target);
       }
+
+      const targetNodesCount = target.index - initialTargetIndex;
+
+      edge.targetNodesCount = targetNodesCount;
     } catch (error) {
+      target.index += edge.targetNodesCount;
+
       ErrorHandler.handle(error);
     }
   }
 
-  private renderClass(
-    edge: Edge,
-    currentEdge: Edge | null,
-    target: Target
-  ): void {
-    // get slot and currentSlot
+  private renderClass(edge: Edge, prevEdge: Edge | null, target: Target): void {
+    // get slot and prevSlot
 
     const slot: Slot = edge.slot;
 
-    const currentSlot: Slot | null = currentEdge?.slot ?? null;
+    const prevSlot: Slot | null = prevEdge?.slot ?? null;
 
     // get type and props
 
     const contentType = slot.getContentType();
     const props = slot.getProps();
 
-    // get current component (if any)
+    // prepare component
 
-    let component = currentEdge?.component ?? null;
-
-    // create the new component or update the current one
+    let component = edge.component;
 
     if (component === null) {
       const ComponentClass = contentType as ClassComponent;
 
       component = new ComponentClass(props);
 
-      component.init();
+      component.initialize((): void => {
+        this.queue(edge);
+      });
     } else {
       component.updateProps(props);
     }
 
-    // update edge with the new component or the current one
-
     edge.component = component;
 
-    // unqueue edge
-
-    this.unqueue(edge);
-
-    // update ref and currentRef if necessary
+    // update ref and prevRef if necessary
 
     const ref = slot.getRef();
 
-    const currentRef = currentSlot?.getRef() ?? null;
+    const prevRef = prevSlot?.getRef() ?? null;
 
-    if (currentRef instanceof Ref && currentRef !== ref) {
-      currentRef.value = null;
+    if (prevRef instanceof Ref && prevRef !== ref) {
+      prevRef.value = null;
     }
 
-    if (ref instanceof Ref && ref !== currentRef) {
+    if (ref instanceof Ref && ref !== prevRef) {
       ref.value = component;
     }
 
     // now it's safe to get component's new content
 
-    const children = component.render();
+    const children = component.render() ?? [];
 
     /*
 
-    store the content inside slot
-
-    the renderChildren() method will then call createChildren(),
-    which will convert all the child slots to Edge objects
-
-    for updated components, currentEdge will be a clone of edge,
-    meaning slot will be equal to currentEdge.slot,
-    but this shouldn't be a problem because first we call slot.setChildren
-    which will update slot with the new child slots
-    and then we call renderChildren which will call createChildren
-    meaning every child edge will be brand new,
-    all of this while currentEdge keeps the current sub-tree
+    store the content inside slot,
+    then on renderChildren we will use these children slots to see
+    if we need to create new edges or to re-use the previous ones (from prevEdge)
 
     */
 
     slot.setChildren(children);
 
-    this.renderChildren(edge, currentEdge, target);
+    this.renderChildren(edge, prevEdge, target);
 
     /*
     
     because of this final line, deeper components will trigger render first
 
-    the handler passed to triggerRender will be used
+    the listener passed to triggerRender will be used
     when there's a "rerender" event fired in the component
-
-    every time renderClass is reached from the parent,
-    edge will be brand new and it's this new edge the one
-    that will carry the new slot (with new props)
-    and the new sub-tree from component.render(),
-    so we want to use this new edge in every "rerender" event
-
-    for a single component, target.node is always the same
 
     */
 
-    component.triggerRender((): void => {
-      this.queue(edge, target.node);
-    });
+    component.triggerRender();
   }
 
   private renderFunction(
     edge: Edge,
-    currentEdge: Edge | null,
+    prevEdge: Edge | null,
     target: Target
   ): void {
     const slot: Slot = edge.slot;
 
-    const currentSlot: Slot | null = currentEdge?.slot ?? null;
+    const prevSlot: Slot | null = prevEdge?.slot ?? null;
 
     const contentType = slot.getContentType();
     const props = slot.getProps();
 
-    let hookster = currentEdge?.hookster ?? null;
+    let hookster = edge.hookster;
 
     if (hookster === null) {
       hookster = new Hookster();
+
+      hookster.initialize((): void => {
+        this.queue(edge);
+      });
     } else {
       hookster.performUpdate();
     }
 
     edge.hookster = hookster;
 
-    this.unqueue(edge);
-
     hookster.activate();
 
-    const currentProps = currentSlot?.getProps() ?? null;
+    const prevProps = prevSlot?.getProps() ?? null;
 
     const ComponentFunction = contentType as FunctionComponent;
 
-    const children = ComponentFunction(props, currentProps);
+    const children = ComponentFunction(props, prevProps) ?? [];
 
     hookster.deactivate();
 
     /*
     
     same as with the renderClass, we call slot.setChildren() and then renderChildren()
-    while keeping the current sub-tree inside currentEdge
+    while keeping the previous sub-tree inside prevEdge
       
     */
 
     slot.setChildren(children);
 
-    this.renderChildren(edge, currentEdge, target);
+    this.renderChildren(edge, prevEdge, target);
 
-    hookster.triggerRender((): void => {
-      this.queue(edge, target.node);
-    });
+    hookster.triggerRender();
   }
 
   private renderElement(
     edge: Edge,
-    currentEdge: Edge | null,
+    prevEdge: Edge | null,
     target: Target
   ): void {
     // node will be an element node
 
-    let node = currentEdge?.node ?? null;
+    let node = edge.node;
 
     if (node === null) {
       node = this.createNode(edge);
@@ -469,7 +472,7 @@ export class Tree {
 
     edge.node = node;
 
-    this.patchNode(edge, currentEdge);
+    this.patchNode(edge, prevEdge);
 
     /*
     
@@ -484,7 +487,7 @@ export class Tree {
 
     const tmpTarget = new Target(node as Element);
 
-    this.renderChildren(edge, currentEdge, tmpTarget);
+    this.renderChildren(edge, prevEdge, tmpTarget);
 
     /*
     
@@ -496,14 +499,10 @@ export class Tree {
     target.insert(node);
   }
 
-  private renderText(
-    edge: Edge,
-    currentEdge: Edge | null,
-    target: Target
-  ): void {
+  private renderText(edge: Edge, prevEdge: Edge | null, target: Target): void {
     // node will be a text node
 
-    let node = currentEdge?.node ?? null;
+    let node = edge.node;
 
     if (node === null) {
       node = this.createNode(edge);
@@ -511,21 +510,17 @@ export class Tree {
 
     edge.node = node;
 
-    this.patchNode(edge, currentEdge);
+    this.patchNode(edge, prevEdge);
 
     target.insert(node);
 
     // text nodes are leafs, so no need for renderChildren()
   }
 
-  private renderNull(
-    edge: Edge,
-    currentEdge: Edge | null,
-    target: Target
-  ): void {
+  private renderNull(edge: Edge, prevEdge: Edge | null, target: Target): void {
     // if slot type is null, we do nothing but loop through its children
 
-    this.renderChildren(edge, currentEdge, target);
+    this.renderChildren(edge, prevEdge, target);
   }
 
   private unmountEdge(edge: Edge, target: Target): void {
@@ -552,14 +547,24 @@ export class Tree {
     hence this optimization:
 
     new tmpTarget is needed for every element slot
-    so in case there's a ghost tree, tree.node has no parent
-    and unmounted elements get freed from memory
+    so in case there's a ghost tree, tree.element has no parent
+    and unmounted elements get freed from memory,
+    except for the ones that belong to the ghost tree of course
+
+    in the past we used to call target.remove only for the direct child nodes
+    to avoid calling target.remove on elements that would be removed anyway...
+    however if there was a whole sequence of elements before a ghost tree's element,
+    those elements would still be accesible via element.parentNode
+    which could lead to memory leaks
+
+    with this new implementation, target.element (for a ghost tree)
+    doesn't have a parentNode anymore
 
     this approach has another advantage:
-    when an event is dispatched in a ghost tree element,
+    when an event is dispatched in a ghost tree's element,
     which is very rare but could happen,
-    the event is bubbled up to tree.node only
-    and it doesn't reach unmounted elements
+    the event is bubbled up to tree.element only
+    and it doesn't reach unmounted ancestor elements
 
     */
 
@@ -608,43 +613,36 @@ export class Tree {
     }
   }
 
-  private isEqual(edge: Edge, currentEdge: Edge): boolean {
-    const slot = edge.slot;
-    const currentSlot = currentEdge.slot;
-
+  private isEqual(slot: any, prevSlot: any): boolean {
     //  check slots based on type and key
 
     if (slot instanceof Slot) {
-      if (!(currentSlot instanceof Slot)) {
+      if (!(prevSlot instanceof Slot)) {
         return false;
       }
 
       const contentType = slot.getContentType();
       const key = slot.getKey();
 
-      const currentContentType = currentSlot.getContentType();
-      const currentKey = currentSlot.getKey();
+      const prevContentType = prevSlot.getContentType();
+      const prevKey = prevSlot.getKey();
 
-      return contentType === currentContentType && key === currentKey;
+      return contentType === prevContentType && key === prevKey;
     }
 
     // null, undefined and false are special cases since they will be ignored by renderEdge
 
     if (slot === null || slot === undefined || slot === false) {
-      return (
-        currentSlot === null ||
-        currentSlot === undefined ||
-        currentSlot === false
-      );
+      return prevSlot === null || prevSlot === undefined || prevSlot === false;
     }
 
     // check if both slots are texts
 
     return (
-      currentSlot !== null &&
-      currentSlot !== undefined &&
-      currentSlot !== false &&
-      !(currentSlot instanceof Slot)
+      prevSlot !== null &&
+      prevSlot !== undefined &&
+      prevSlot !== false &&
+      !(prevSlot instanceof Slot)
     );
   }
 
@@ -664,11 +662,11 @@ export class Tree {
     }
   }
 
-  private patchNode(edge: Edge, currentEdge: Edge | null): void {
+  private patchNode(edge: Edge, prevEdge: Edge | null): void {
     const slot = edge.slot;
     const node = edge.node!;
 
-    const currentSlot = currentEdge?.slot ?? null;
+    const prevSlot = prevEdge?.slot ?? null;
 
     if (slot instanceof Slot) {
       // node is an element node
@@ -677,14 +675,13 @@ export class Tree {
 
       const attributes = slot.getAttributes() ?? {};
 
-      const currentAttributes =
-        (currentSlot as Slot | null)?.getAttributes() ?? {};
+      const prevAttributes = (prevSlot as Slot | null)?.getAttributes() ?? {};
 
       // loop through attributes
 
       for (const key in attributes) {
         const value = attributes[key] ?? null;
-        const currentValue = currentAttributes[key] ?? null;
+        const prevValue = prevAttributes[key] ?? null;
 
         switch (key) {
           case "key": {
@@ -693,15 +690,15 @@ export class Tree {
 
           case "ref": {
             const ref = value;
-            const currentRef = currentValue;
+            const prevRef = prevValue;
 
-            // update ref and currentRef
+            // update ref and prevRef
 
-            if (currentRef instanceof Ref && currentRef !== ref) {
-              currentRef.value = null;
+            if (prevRef instanceof Ref && prevRef !== ref) {
+              prevRef.value = null;
             }
 
-            if (ref instanceof Ref && ref !== currentRef) {
+            if (ref instanceof Ref && ref !== prevRef) {
               ref.value = element;
             }
 
@@ -710,7 +707,7 @@ export class Tree {
 
           default: {
             const isValueHandler = typeof value === "function";
-            const isCurrentValueHandler = typeof currentValue === "function";
+            const isCurrentValueHandler = typeof prevValue === "function";
 
             if (value !== null) {
               // we have an attribute
@@ -718,21 +715,21 @@ export class Tree {
               if (isValueHandler) {
                 // set element's handler
 
-                if (currentValue !== null && !isCurrentValueHandler) {
+                if (prevValue !== null && !isCurrentValueHandler) {
                   element.removeAttribute(key);
                 }
 
-                if (value !== currentValue) {
+                if (value !== prevValue) {
                   element[key] = value;
                 }
               } else {
                 // set element's attribute
 
-                if (currentValue !== null && isCurrentValueHandler) {
+                if (prevValue !== null && isCurrentValueHandler) {
                   element[key] = null;
                 }
 
-                if (value !== currentValue) {
+                if (value !== prevValue) {
                   try {
                     element.setAttribute(key, value);
                   } catch (error) {
@@ -743,7 +740,7 @@ export class Tree {
             } else {
               // value is null
 
-              if (currentValue !== null) {
+              if (prevValue !== null) {
                 // delete element's handler or attribute
 
                 if (isCurrentValueHandler) {
@@ -759,9 +756,9 @@ export class Tree {
         }
       }
 
-      // loop through currentAttributes
+      // loop through prevAttributes
 
-      for (const key in currentAttributes) {
+      for (const key in prevAttributes) {
         // ignore if key found in attributes
 
         const found = key in attributes;
@@ -770,23 +767,23 @@ export class Tree {
           continue;
         }
 
-        const currentValue = currentAttributes[key] ?? null;
+        const prevValue = prevAttributes[key] ?? null;
 
         switch (key) {
           case "ref": {
-            // update currentRef
+            // update prevRef
 
-            const currentRef = currentValue;
+            const prevRef = prevValue;
 
-            if (currentRef instanceof Ref) {
-              currentRef.value = null;
+            if (prevRef instanceof Ref) {
+              prevRef.value = null;
             }
           }
 
           default: {
-            const isCurrentValueHandler = typeof currentValue === "function";
+            const isCurrentValueHandler = typeof prevValue === "function";
 
-            if (currentValue !== null) {
+            if (prevValue !== null) {
               // delete element's handler or attribute
 
               if (isCurrentValueHandler) {
@@ -805,151 +802,28 @@ export class Tree {
 
       const value = `${slot}`;
 
-      const currentValue = currentSlot !== null ? `${currentSlot}` : null;
+      const prevValue = prevSlot !== null ? `${prevSlot}` : null;
 
-      if (value !== currentValue) {
+      if (value !== prevValue) {
         text.nodeValue = value;
       }
     }
   }
 
   /*
-
-  this method will search for an edge with node inside the edge's previous siblings
-  then it will return the right target index used to create a new Target
-
-  if no edge with node is found in the siblings,
-  it will search in the parent siblings, creating a recursion
   
-  this means it will start with edge but the cursor will be moved up the tree
-  until a value is returned
+  loop through preceding siblings and parent to accumulate targetIndex
+  and find targetElement (some node in an ancestor edge)
 
-  it returns 0 in specific cases
-
-  --
-
-  # tree 1:
-
-  Tree.node x
-
-  edge A {
-    parent null
-    node null
-    children {
-      edge AA {
-        parent A
-        node null
-        children {
-          edge AAA {
-            parent AA
-            node y
-            children {}
-          }
-        }
-      }
-      edge AB {
-        parent A
-        node null
-        children {
-          edge ABA {
-            parent AB
-            node z
-            children {}
-          }
-        }
-      }
-      edge AC {
-        parent A
-        node null
-        children {
-          edge ACA {
-            parent AC
-            node t
-            children {}
-          }
-        }
-      }
-    }
-  }
-
-  findTargetIndex(A, x) => 0 (from parent === null, without recursion)
-  findTargetIndex(AA, x) => 0 (from parent === null, with recursion)
-  findTargetIndex(AB, x) => 1 (from findNodeIndex, found in 0)
-  findTargetIndex(AC, x) => 2 (from findNodeIndex, found in 1)
-
-  --
-
-  # tree 2:
-
-  Tree.node x
-
-  edge A {
-    parent null
-    node null
-    children {
-      edge AA {
-        parent A
-        node y
-        children {
-          edge AAA {
-            parent AA
-            node null
-            children {
-              edge AAAA {
-                parent AAA
-                node z
-                children {}
-              }
-            }
-          }
-          edge AAB {
-            parent AA
-            node null
-            children {
-              edge AAABA {
-                parent AAB
-                node t
-                children {}
-              }
-            }
-          }
-          edge AAC {
-            parent AA
-            node null
-            children {
-              edge AAACA {
-                parent AAC
-                node u
-                children {}
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  findTargetIndex(AAA, y) => 0 (from node === targetNode)
-  findTargetIndex(AAB, y) => 1 (from findNodeIndex, found in 0)
-  findTargetIndex(AAC, y) => 2 (from findNodeIndex, found in 1)
+  if parent is null, target element is the tree element
 
   */
 
-  private findTargetIndex(edge: Edge, targetNode: Node): number {
-    /*
-    
-    we work with the parent because we need to loop through the edge's previous siblings
-
-    parent's children = edge siblings
-
-    */
-
+  private createTarget(edge: Edge, targetIndex: number = 0): Target {
     const parent = edge.parent;
 
-    // no parent means edge is the initial this.edge, fall back to 0
-
     if (parent === null) {
-      return 0;
+      return new Target(this.element, targetIndex);
     }
 
     const node = parent.node;
@@ -957,154 +831,16 @@ export class Tree {
 
     const index = children.indexOf(edge);
 
-    // loop children from index - 1 to 0
-
     for (let i = index - 1; i >= 0; i--) {
       const child = children[i];
 
-      const j = this.findNodeIndex(child, targetNode);
-
-      if (j !== null) {
-        // j + 1 is needed so we return the index where the Target object needs to start from
-
-        return j + 1;
-      }
+      targetIndex += child.targetNodesCount;
     }
-
-    /*
-    
-    and edge with node hasn't been found among the edge's previous siblings,
-    it's time to start looking in the parent's previous siblings
-    
-    but first we check for a specific case:
-    if node (the parent's node) is the same as targetNode,
-    it means parent is the targetNode's edge itself,
-    so we can end the recursion and fall back to 0
-
-    */
-
-    if (node === targetNode) {
-      return 0;
-    }
-
-    // it calls itself again (recursion), but this time with parent instead of edge
-
-    return this.findTargetIndex(parent, targetNode);
-  }
-
-  /*
-
-  this method will find the last node in the edge sub-tree
-  and return its index in targetNode.childNodes
-
-  if no node is found in the sub-tree, it returns null
-
-  it uses recursion under the hood
-  
-  we create a loop between the edge's children from last to first
-  and we execute findNodeIndex() to every child
-
-  if edge's node is not null, it means we have found the edge we need,
-  we return the index of the edge's node as a child of targetNode,
-  this will end the entire loop
-  
-  otherwise we keep the loop going deeper and deeper, from last to first every time,
-  until we find an edge that has a node
-  
-  again, if we don't find any node in the sub-tree, null is returned
-
-  if the very first edge passed has a node, we won't even enter the loop
-  it will return the index right away
-
-  --
-
-  # tree:
-
-  Tree.node x
-
-  edge A {
-    node null
-    children {
-      edge AA {
-        node null
-        children {
-          edge AAA {
-            node y
-            children {}
-          }
-        }
-      }
-      edge AB {
-        node null
-        children {
-          edge ABA {
-            node z
-            children {}
-          }
-          edge ABB {
-            node null
-            children {
-              edge ABBA {
-                node t
-                children {}
-              }
-            }
-          }
-        }
-      }
-      edge AC {
-        node null
-        children {
-          edge ACA {
-            node null
-            children {}
-          }
-        }
-      }
-    }
-  }
-
-  findNodeIndex(AA, x) -> 0 (found in AAA)
-  findNodeIndex(AB, x) -> 2 (found in ABBA)
-  findNodeIndex(AC, x) -> null
-
-  */
-
-  private findNodeIndex(edge: Edge, targetNode: Node): number | null {
-    const node = edge.node;
-    const children = edge.children;
-
-    /*
-    
-    if node found, get the index
-    that will implicitly end the recursion with an actual value
-
-    */
 
     if (node !== null) {
-      const childNodes = [...targetNode.childNodes];
-
-      return childNodes.indexOf(node as ChildNode);
+      return new Target(node as Element, targetIndex);
     }
 
-    // loop children from last to first
-
-    for (let i = children.length - 1; i >= 0; i--) {
-      const child = children[i];
-
-      // apply recursion
-
-      const index = this.findNodeIndex(child, targetNode);
-
-      // as soon as we find an index, the recursion is ended
-
-      if (index !== null) {
-        return index;
-      }
-    }
-
-    // no node has been found in the sub-tree
-
-    return null;
+    return this.createTarget(parent, targetIndex);
   }
 }

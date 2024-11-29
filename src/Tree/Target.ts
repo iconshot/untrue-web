@@ -1,28 +1,28 @@
 export class Target {
-  constructor(public readonly node: Element, public index: number = 0) {}
+  constructor(public readonly element: Element, public index: number = 0) {}
 
-  insert(child: Node): void {
+  public insert(child: Node): void {
     // get the currentChild based on this.index, it can be null
 
     const currentChild: Node | null =
-      this.index < this.node.childNodes.length
-        ? this.node.childNodes[this.index]
+      this.index < this.element.childNodes.length
+        ? this.element.childNodes[this.index]
         : null;
 
-    // insert child before currentChild or append child to this.node
+    // insert child before currentChild or append child to this.element
 
     if (currentChild !== null) {
       if (child !== currentChild) {
-        this.node.insertBefore(child, currentChild);
+        this.element.insertBefore(child, currentChild);
       }
     } else {
-      this.node.appendChild(child);
+      this.element.appendChild(child);
     }
 
     this.index++;
   }
 
-  remove(child: Node): void {
-    this.node.removeChild(child);
+  public remove(child: Node): void {
+    this.element.removeChild(child);
   }
 }

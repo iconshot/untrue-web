@@ -3,8 +3,8 @@ import $, { Component } from "untrue";
 import { Tree } from "../Tree/Tree";
 
 export class Head extends Component {
-  init(): void {
-    let tree: Tree = new Tree(document.head);
+  public init(): void {
+    const tree = new Tree(document.head);
 
     this.on("render", (): void => {
       /*
