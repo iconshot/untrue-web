@@ -70,91 +70,6 @@ export class Tree {
     clearTimeout(this.timeout);
   }
 
-  // add edge to the stack
-
-  private queue(edge: Edge): void {
-    this.stack.push(edge);
-
-    // this allows to batch multiple components being updated at the same time
-
-    clearTimeout(this.timeout);
-
-    this.timeout = setTimeout((): void => {
-      this.rerender();
-    });
-  }
-
-  // remove edge from the stack
-
-  private unqueue(edge: Edge): void {
-    this.stack = this.stack.filter((tmpEdge): boolean => tmpEdge !== edge);
-  }
-
-  private rerender(): void {
-    // end the recursion until queue() is called again
-
-    if (this.stack.length === 0) {
-      return;
-    }
-
-    // get a stack edge, closer to the root first
-
-    this.stack.sort((a, b): number => a.depth - b.depth);
-
-    const edge = this.stack[0];
-
-    const target = this.createTarget(edge);
-
-    /*
-    
-    clone edge to use with renderEdge
-
-    the clone will have the references to previous components and DOM nodes
-    and the overall previous sub-tree
-    while edge will be updated inside renderEdge
-
-    */
-
-    const prevEdge = edge.clone();
-
-    // rerender component
-
-    this.renderEdge(edge, prevEdge, target);
-
-    // if there's a new targetNodesCount, propagate the difference
-
-    const difference = edge.targetNodesCount - prevEdge.targetNodesCount;
-
-    if (difference !== 0) {
-      this.propagateTargetNodesCountDifference(edge, difference);
-    }
-
-    // call again to rerender remaining components
-
-    this.rerender();
-  }
-
-  private propagateTargetNodesCountDifference(
-    edge: Edge,
-    difference: number
-  ): void {
-    const parent = edge.parent;
-
-    if (parent === null) {
-      return;
-    }
-
-    const node = parent.node;
-
-    if (node !== null) {
-      return;
-    }
-
-    parent.targetNodesCount += difference;
-
-    this.propagateTargetNodesCountDifference(parent, difference);
-  }
-
   private renderChildren(
     edge: Edge,
     prevEdge: Edge | null,
@@ -810,6 +725,70 @@ export class Tree {
     }
   }
 
+  // add edge to the stack
+
+  private queue(edge: Edge): void {
+    this.stack.push(edge);
+
+    // this allows to batch multiple components being updated at the same time
+
+    clearTimeout(this.timeout);
+
+    this.timeout = setTimeout((): void => {
+      this.rerender();
+    });
+  }
+
+  // remove edge from the stack
+
+  private unqueue(edge: Edge): void {
+    this.stack = this.stack.filter((tmpEdge): boolean => tmpEdge !== edge);
+  }
+
+  private rerender(): void {
+    // end the recursion until queue() is called again
+
+    if (this.stack.length === 0) {
+      return;
+    }
+
+    // get a stack edge, closer to the root first
+
+    this.stack.sort((a, b): number => a.depth - b.depth);
+
+    const edge = this.stack[0];
+
+    const target = this.createTarget(edge);
+
+    /*
+  
+    clone edge to use with renderEdge
+
+    the clone will have the references to previous components and DOM nodes
+    and the overall previous sub-tree
+    while edge will be updated inside renderEdge
+
+    */
+
+    const prevEdge = edge.clone();
+
+    // rerender component
+
+    this.renderEdge(edge, prevEdge, target);
+
+    // if there's a new targetNodesCount, propagate the difference
+
+    const difference = edge.targetNodesCount - prevEdge.targetNodesCount;
+
+    if (difference !== 0) {
+      this.propagateTargetNodesCountDifference(edge, difference);
+    }
+
+    // call again to rerender remaining components
+
+    this.rerender();
+  }
+
   /*
   
   loop through preceding siblings and parent to accumulate targetIndex
@@ -842,5 +821,47 @@ export class Tree {
     }
 
     return this.createTarget(parent, targetIndex);
+  }
+
+  /*
+
+  we rely on targetNodesCount to skip edges
+  or create the Target for a rerendered edge
+
+  if we have a component A inside a component B
+  and component A is updated, it may have a new targetNodesCount
+  but component B needs to know about that change
+  because we could use component B's targetNodesCount anytime
+
+  so we use a loop to propagate but with a catch:
+  
+  when we reach an element (node !== null)
+  that means we can end the loop
+  because that node (element) is the target element
+  for the initial edge passed to propagateTargetNodesCountDifference...
+  and the ancestors of that element belong to other targets
+  unrelated to the target in which the initial edge operates
+
+  */
+
+  private propagateTargetNodesCountDifference(
+    edge: Edge,
+    difference: number
+  ): void {
+    const parent = edge.parent;
+
+    if (parent === null) {
+      return;
+    }
+
+    const node = parent.node;
+
+    if (node !== null) {
+      return;
+    }
+
+    parent.targetNodesCount += difference;
+
+    this.propagateTargetNodesCountDifference(parent, difference);
   }
 }
