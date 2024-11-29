@@ -833,7 +833,7 @@ export class Tree {
   but component B needs to know about that change
   because we could use component B's targetNodesCount anytime
 
-  so we use a loop to propagate but with a catch:
+  so we use a loop to propagate the difference, but with a catch:
   
   when we reach an element (node !== null)
   that means we can end the loop
