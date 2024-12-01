@@ -195,8 +195,8 @@ export class Tree {
     }
 
     if (prevEdge !== null && edge.slot instanceof Slot) {
-      const slot = edge.slot as Slot;
-      const prevSlot = prevEdge.slot as Slot;
+      const slot: Slot = edge.slot;
+      const prevSlot: Slot = prevEdge.slot;
 
       if (slot.isClass() || slot.isFunction()) {
         let equal = false;
