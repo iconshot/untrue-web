@@ -746,47 +746,46 @@ export class Tree {
   }
 
   private rerender(): void {
-    // end the recursion until queue() is called again
-
-    if (this.stack.length === 0) {
-      return;
-    }
-
-    // get a stack edge, closer to the root first
+    // place closer to the root first
 
     this.stack.sort((a, b): number => a.depth - b.depth);
 
-    const edge = this.stack[0];
-
-    const target = this.createTarget(edge);
-
     /*
-  
-    clone edge to use with renderEdge
-
-    the clone will have the references to previous components and DOM nodes
-    and the overall previous sub-tree
-    while edge will be updated inside renderEdge
-
+    
+    using `while` instead of `for` because stack items
+    could be removed anytime inside renderEdge
+    
     */
 
-    const prevEdge = edge.clone();
+    while (this.stack.length > 0) {
+      const edge = this.stack[0];
 
-    // rerender component
+      const target = this.createTarget(edge);
 
-    this.renderEdge(edge, prevEdge, target);
+      /*
+    
+      clone edge to use with renderEdge
 
-    // if there's a new targetNodesCount, propagate the difference
+      the clone will have the references to previous components and DOM nodes
+      and the overall previous sub-tree
+      while edge will be updated inside renderEdge
 
-    const difference = edge.targetNodesCount - prevEdge.targetNodesCount;
+      */
 
-    if (difference !== 0) {
-      this.propagateTargetNodesCountDifference(edge, difference);
+      const prevEdge = edge.clone();
+
+      // rerender component
+
+      this.renderEdge(edge, prevEdge, target);
+
+      // if there's a new targetNodesCount, propagate the difference
+
+      const difference = edge.targetNodesCount - prevEdge.targetNodesCount;
+
+      if (difference !== 0) {
+        this.propagateTargetNodesCountDifference(edge, difference);
+      }
     }
-
-    // call again to rerender remaining components
-
-    this.rerender();
   }
 
   /*
