@@ -120,11 +120,11 @@ export class Router {
           this.update();
         };
 
-        this.on("mount", (): void => {
+        this.on("immediateMount", (): void => {
           window.addEventListener("locationchange", listener);
         });
 
-        this.on("unmount", (): void => {
+        this.on("immediateUnmount", (): void => {
           window.removeEventListener("locationchange", listener);
         });
       }

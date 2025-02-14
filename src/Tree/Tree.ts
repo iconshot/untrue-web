@@ -271,6 +271,13 @@ export class Tree {
 
       component = new ComponentClass(props);
 
+      /*
+      
+      the listener passed to initialize() will be called
+      when there's a "rerender" event fired in the component
+
+      */
+
       component.initialize((): void => {
         this.queue(edge);
       });
@@ -312,14 +319,12 @@ export class Tree {
 
     /*
     
-    because of this final line, deeper components will trigger render first
-
-    the listener passed to triggerRender will be used
-    when there's a "rerender" event fired in the component
+    because of this final line
+    deeper components will get their render lifecycle events first
 
     */
 
-    component.triggerRender();
+    component.finishRender();
   }
 
   private renderFunction(
@@ -369,7 +374,7 @@ export class Tree {
 
     this.renderChildren(edge, prevEdge, target);
 
-    hookster.triggerRender();
+    hookster.finishRender();
   }
 
   private renderElement(
@@ -511,20 +516,20 @@ export class Tree {
 
     this is called at the very end of the method
     to keep consistency with renderClass/renderFunction:
-    deeper components will reach triggerUnmount first
+    deeper components will reach finishUnmount first
 
     */
 
     if (component !== null) {
       this.unqueue(edge);
 
-      component.triggerUnmount();
+      component.finishUnmount();
     }
 
     if (hookster !== null) {
       this.unqueue(edge);
 
-      hookster.triggerUnmount();
+      hookster.finishUnmount();
     }
   }
 
