@@ -98,7 +98,9 @@ export class Tree {
         for (let j = 0; j < prevSlots.length; j++) {
           const prevSlot = prevSlots[j];
 
-          if (this.isEqual(slot, prevSlot)) {
+          const equal = this.compareSlots(slot, prevSlot);
+
+          if (equal) {
             child = prevEdge!.children[j];
 
             if (j !== i) {
@@ -113,7 +115,9 @@ export class Tree {
 
         const prevSlot = prevSlots[i];
 
-        if (this.isEqual(slot, prevSlot)) {
+        const equal = this.compareSlots(slot, prevSlot);
+
+        if (equal) {
           child = prevEdge!.children[i];
         }
       }
@@ -183,45 +187,34 @@ export class Tree {
 
   check type of slot and call the right render method
 
-  class/function components may be skipped if they have no updates
+  edges may be skipped if they have no changes
 
   null, undefined and false values are ignored
 
   */
 
   private renderEdge(edge: Edge, prevEdge: Edge | null, target: Target): void {
-    if (edge.component !== null || edge.hookster !== null) {
+    const slot = edge.slot;
+    const component = edge.component;
+    const hookster = edge.hookster;
+
+    if (component !== null) {
       this.unqueue(edge);
     }
 
-    if (prevEdge !== null && edge.slot instanceof Slot) {
-      const slot: Slot = edge.slot;
-      const prevSlot: Slot = prevEdge.slot;
-
-      if (slot.isClass() || slot.isFunction()) {
-        let equal = false;
-
-        if (slot.isClass()) {
-          equal = !edge.component!.needsUpdate();
-        }
-
-        if (slot.isFunction()) {
-          equal = !edge.hookster!.needsUpdate();
-        }
-
-        if (equal) {
-          equal = Comparer.compare(slot, prevSlot);
-        }
-
-        if (equal) {
-          target.index += edge.targetNodesCount;
-
-          return;
-        }
-      }
+    if (hookster !== null) {
+      this.unqueue(edge);
     }
 
-    const slot = edge.slot;
+    if (prevEdge !== null) {
+      const equal = this.compareEdges(edge, prevEdge);
+
+      if (equal) {
+        target.index += edge.targetNodesCount;
+
+        return;
+      }
+    }
 
     const initialTargetIndex = target.index;
 
@@ -533,9 +526,9 @@ export class Tree {
     }
   }
 
-  private isEqual(slot: any, prevSlot: any): boolean {
-    //  check slots based on type and key
+  //  check slots based on contentType and key
 
+  private compareSlots(slot: any, prevSlot: any): boolean {
     if (slot instanceof Slot) {
       if (!(prevSlot instanceof Slot)) {
         return false;
@@ -564,6 +557,33 @@ export class Tree {
       prevSlot !== false &&
       !(prevSlot instanceof Slot)
     );
+  }
+
+  // check edges in case they may be skipped
+
+  private compareEdges(edge: Edge, prevEdge: Edge): boolean {
+    if (edge.slot instanceof Slot) {
+      const slot: Slot = edge.slot;
+      const prevSlot: Slot = prevEdge.slot;
+
+      let equal = true;
+
+      if (slot.isClass()) {
+        equal = !edge.component!.needsUpdate();
+      }
+
+      if (slot.isFunction()) {
+        equal = !edge.hookster!.needsUpdate();
+      }
+
+      if (equal) {
+        equal = Comparer.compare(slot, prevSlot);
+      }
+
+      return equal;
+    }
+
+    return edge.slot === prevEdge.slot;
   }
 
   private createNode(edge: Edge): Node {
