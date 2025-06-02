@@ -4,6 +4,8 @@ import $, {
   Props,
   ComponentType,
   ClassComponent,
+  Emitter,
+  Hook,
 } from "untrue";
 
 import crossroads from "crossroads";
@@ -42,32 +44,26 @@ export interface RouterProps<K> extends Props {
   scroll?: boolean;
 }
 
-export class Router {
-  private static initialized = false;
+type RouterControllerSignatures = {
+  locationchange: () => any;
+};
 
-  public static init(): void {
-    if (this.initialized) {
-      return;
-    }
+class RouterController extends Emitter<RouterControllerSignatures> {
+  constructor() {
+    super();
 
     window.addEventListener("popstate", (): void => {
       this.emitLocationChange();
     });
-
-    this.initialized = true;
   }
 
-  public static pushState(
-    data: any,
-    unused: string,
-    url?: string | URL | null
-  ): void {
+  public pushState(data: any, unused: string, url?: string | URL | null): void {
     window.history.pushState(data, unused, url);
 
     this.emitLocationChange();
   }
 
-  public static replaceState(
+  public replaceState(
     data: any,
     unused: string,
     url?: string | URL | null
@@ -77,21 +73,27 @@ export class Router {
     this.emitLocationChange();
   }
 
-  private static emitLocationChange(): void {
-    window.dispatchEvent(new Event("locationchange"));
+  private emitLocationChange(): void {
+    this.emit("locationchange");
   }
 
-  public static wrapRouter<K = { [key: string]: any }>(): ClassComponent<
+  public getLocationPath(): string {
+    return `/${window.location.pathname.replace(/^\/|\/$/g, "")}`;
+  }
+
+  public wrapRouter<K extends Record<string, any>>(): ClassComponent<
     RouterProps<K>
   > {
-    return class RouterWrapper extends Component<RouterProps<K>> {
+    const self = this;
+
+    return class Router extends Component<RouterProps<K>> {
       private locationPath: string | null = null;
 
       private route: InternalRoute<K> | null = null;
 
       public init(): void {
         const listener = (): void => {
-          const locationPath = this.getLocationPath();
+          const locationPath = self.getLocationPath();
 
           // ignore changes like /page?hello=world -> /page?hello=mars
 
@@ -121,16 +123,12 @@ export class Router {
         };
 
         this.on("mount", (): void => {
-          window.addEventListener("locationchange", listener);
+          self.on("locationchange", listener);
         });
 
         this.on("unmount", (): void => {
-          window.removeEventListener("locationchange", listener);
+          self.off("locationchange", listener);
         });
-      }
-
-      private getLocationPath(): string {
-        return `/${window.location.pathname.replace(/^\/|\/$/g, "")}`;
       }
 
       private parseRoute(): InternalRoute<K> {
@@ -191,7 +189,7 @@ export class Router {
 
         // parse path
 
-        const locationPath = this.getLocationPath();
+        const locationPath = self.getLocationPath();
 
         router.parse(locationPath);
 
@@ -243,7 +241,7 @@ export class Router {
     };
   }
 
-  static onClick = (event: MouseEvent): boolean => {
+  public onClick = (event: MouseEvent): boolean => {
     /*
     
     return true means the click event will be handled by the browser
@@ -275,7 +273,7 @@ export class Router {
     // if urls are different, pushState
 
     if (locationUrl !== elementUrl) {
-      Router.pushState(null, "", href);
+      this.pushState(null, "", href);
 
       return false;
     }
@@ -286,7 +284,7 @@ export class Router {
     // if navigating from #hash to no #hash, pushState
 
     if (hasLocationHash && !hasElementHash) {
-      Router.pushState(null, "", href);
+      this.pushState(null, "", href);
 
       return false;
     }
@@ -295,6 +293,46 @@ export class Router {
 
     return hasElementHash;
   };
+
+  public bind(component: Component, listener: () => void): void {
+    component.on("mount", (): void => {
+      this.on("locationchange", listener);
+    });
+
+    component.on("unmount", (): void => {
+      this.off("locationchange", listener);
+    });
+  }
+
+  public use(listener: () => void): void {
+    const listenerVar = Hook.useVar<() => void>(listener);
+
+    listenerVar.value = listener;
+
+    const callback = Hook.useCallback((): void => {
+      const listener = listenerVar.value;
+
+      listener();
+    });
+
+    Hook.useMountLifecycle((): void => {
+      this.on("locationchange", callback);
+    });
+
+    Hook.useUnmountLifecycle((): void => {
+      this.off("locationchange", callback);
+    });
+  }
+
+  public useLocationPath(): string {
+    const update = Hook.useUpdate();
+
+    this.use((): void => {
+      update();
+    });
+
+    return this.getLocationPath();
+  }
 }
 
-Router.init();
+export default new RouterController();
