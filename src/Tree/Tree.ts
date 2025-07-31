@@ -634,6 +634,8 @@ export class Tree {
 
       const prevAttributes = prevSlot?.getAttributes() ?? {};
 
+      const elementAny = element as any;
+
       for (const key in attributes) {
         const value = attributes[key] ?? null;
         const prevValue = prevAttributes[key] ?? null;
@@ -659,13 +661,13 @@ export class Tree {
                 }
 
                 if (value !== prevValue) {
-                  element[key] = value;
+                  elementAny[key] = value;
                 }
               } else {
                 // set element's attribute
 
                 if (prevValue !== null && isPrevValueHandler) {
-                  element[key] = null;
+                  elementAny[key] = null;
                 }
 
                 if (value !== prevValue) {
@@ -683,7 +685,7 @@ export class Tree {
                 // delete element's handler or attribute
 
                 if (isPrevValueHandler) {
-                  element[key] = null;
+                  elementAny[key] = null;
                 } else {
                   element.removeAttribute(key);
                 }
@@ -721,7 +723,7 @@ export class Tree {
               // delete element's handler or attribute
 
               if (isPrevValueHandler) {
-                element[key] = null;
+                elementAny[key] = null;
               } else {
                 element.removeAttribute(key);
               }

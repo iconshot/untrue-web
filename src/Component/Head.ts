@@ -26,5 +26,3 @@ export class Head extends Component {
     });
   }
 }
-
-export default Head;

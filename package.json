@@ -1,6 +1,6 @@
 {
   "name": "@untrue/web",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Web integration for Untrue.",
   "homepage": "https://untrue.dev",
   "repository": {
@@ -25,6 +25,7 @@
     "untrue": "^5.15.0"
   },
   "devDependencies": {
+    "@types/crossroads": "^0.0.33",
     "typescript": "^5.5.4"
   }
 }
