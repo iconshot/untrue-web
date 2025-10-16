@@ -1,6 +1,5 @@
 import {
   Slot,
-  Ref,
   Hookster,
   ClassComponent,
   FunctionComponent,
