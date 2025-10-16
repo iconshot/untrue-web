@@ -262,7 +262,7 @@ export class Tree {
     if (component === null) {
       const ComponentClass = contentType as ClassComponent;
 
-      component = new ComponentClass(props);
+      component = new ComponentClass(props as any);
 
       /*
       
@@ -275,7 +275,7 @@ export class Tree {
         this.queue(edge);
       });
     } else {
-      component.updateProps(props);
+      component.updateProps(props as any);
     }
 
     edge.component = component;
@@ -286,12 +286,14 @@ export class Tree {
 
     const prevRef = prevSlot?.getRef() ?? null;
 
-    if (prevRef instanceof Ref && prevRef !== ref) {
-      prevRef.value = null;
-    }
+    if (ref !== prevRef) {
+      if (prevRef !== null) {
+        prevRef.value = null;
+      }
 
-    if (ref instanceof Ref && ref !== prevRef) {
-      ref.value = component;
+      if (ref !== null) {
+        ref.value = component;
+      }
     }
 
     // now it's safe to get component's new content
@@ -352,7 +354,7 @@ export class Tree {
 
     const ComponentFunction = contentType as FunctionComponent;
 
-    const children = ComponentFunction(props, prevProps) ?? [];
+    const children = ComponentFunction(props as any, prevProps as any) ?? [];
 
     hookster.deactivate();
 
@@ -375,17 +377,37 @@ export class Tree {
     prevEdge: Edge | null,
     target: Target
   ): void {
+    const slot: Slot = edge.slot;
+
+    const prevSlot: Slot | null = prevEdge?.slot ?? null;
+
     // node will be an element node
 
     let node = edge.node;
 
     if (node === null) {
-      node = this.createNode(edge);
+      node = this.createElementNode(edge);
     }
 
     edge.node = node;
 
-    this.patchNode(edge, prevEdge);
+    this.patchElementNode(edge, prevEdge);
+
+    // handle ref and prevRef
+
+    const ref = slot.getRef();
+
+    const prevRef = prevSlot?.getRef() ?? null;
+
+    if (ref !== prevRef) {
+      if (prevRef !== null) {
+        prevRef.value = null;
+      }
+
+      if (ref !== null) {
+        ref.value = node;
+      }
+    }
 
     /*
     
@@ -418,12 +440,12 @@ export class Tree {
     let node = edge.node;
 
     if (node === null) {
-      node = this.createNode(edge);
+      node = this.createTextNode(edge);
     }
 
     edge.node = node;
 
-    this.patchNode(edge, prevEdge);
+    this.patchTextNode(edge, prevEdge);
 
     target.insert(node);
 
@@ -585,139 +607,79 @@ export class Tree {
 
     return edge.slot === prevEdge.slot;
   }
+  private createElementNode(edge: Edge): Element {
+    const slot: Slot = edge.slot;
 
-  private createNode(edge: Edge): Node {
-    // according to the slot type, create an element node or a text node
+    const contentType = slot.getContentType();
 
-    if (edge.slot instanceof Slot) {
-      const slot: Slot = edge.slot;
+    const tagName = contentType as string;
 
-      const contentType = slot.getContentType();
-
-      const tagName = contentType as string;
-
-      return document.createElement(tagName);
-    } else {
-      return document.createTextNode("");
-    }
+    return document.createElement(tagName);
   }
 
-  private patchNode(edge: Edge, prevEdge: Edge | null): void {
-    const node = edge.node!;
+  private createTextNode(edge: Edge): Text {
+    return document.createTextNode("");
+  }
 
-    if (edge.slot instanceof Slot) {
-      // node is an element node
+  private patchElementNode(edge: Edge, prevEdge: Edge | null): void {
+    const slot: Slot = edge.slot;
 
-      const slot: Slot = edge.slot;
+    const prevSlot: Slot | null = prevEdge?.slot ?? null;
 
-      const prevSlot: Slot | null = prevEdge?.slot ?? null;
+    const element = edge.node as Element;
 
-      const element = node as Element;
+    // handle attributes
 
-      // handle ref and prevRef
+    const attributes = slot.getAttributes() ?? {};
 
-      const ref = slot.getRef();
+    const prevAttributes = prevSlot?.getAttributes() ?? {};
 
-      const prevRef = prevSlot?.getRef() ?? null;
+    const elementAny = element as any;
 
-      if (prevRef instanceof Ref && prevRef !== ref) {
-        prevRef.value = null;
-      }
+    for (const key in attributes) {
+      const value = attributes[key] ?? null;
+      const prevValue = prevAttributes[key] ?? null;
 
-      if (ref instanceof Ref && ref !== prevRef) {
-        ref.value = element;
-      }
+      switch (key) {
+        case "key":
+        case "ref": {
+          break;
+        }
 
-      // handle attributes
+        default: {
+          const isValueHandler = typeof value === "function";
+          const isPrevValueHandler = typeof prevValue === "function";
 
-      const attributes = slot.getAttributes() ?? {};
+          if (value !== null) {
+            // we have an attribute
 
-      const prevAttributes = prevSlot?.getAttributes() ?? {};
+            if (isValueHandler) {
+              // set element's handler
 
-      const elementAny = element as any;
+              if (prevValue !== null && !isPrevValueHandler) {
+                element.removeAttribute(key);
+              }
 
-      for (const key in attributes) {
-        const value = attributes[key] ?? null;
-        const prevValue = prevAttributes[key] ?? null;
-
-        switch (key) {
-          case "key":
-          case "ref": {
-            break;
-          }
-
-          default: {
-            const isValueHandler = typeof value === "function";
-            const isPrevValueHandler = typeof prevValue === "function";
-
-            if (value !== null) {
-              // we have an attribute
-
-              if (isValueHandler) {
-                // set element's handler
-
-                if (prevValue !== null && !isPrevValueHandler) {
-                  element.removeAttribute(key);
-                }
-
-                if (value !== prevValue) {
-                  elementAny[key] = value;
-                }
-              } else {
-                // set element's attribute
-
-                if (prevValue !== null && isPrevValueHandler) {
-                  elementAny[key] = null;
-                }
-
-                if (value !== prevValue) {
-                  try {
-                    element.setAttribute(key, value);
-                  } catch (error) {
-                    ErrorHandler.handle(error);
-                  }
-                }
+              if (value !== prevValue) {
+                elementAny[key] = value;
               }
             } else {
-              // value is null
+              // set element's attribute
 
-              if (prevValue !== null) {
-                // delete element's handler or attribute
+              if (prevValue !== null && isPrevValueHandler) {
+                elementAny[key] = null;
+              }
 
-                if (isPrevValueHandler) {
-                  elementAny[key] = null;
-                } else {
-                  element.removeAttribute(key);
+              if (value !== prevValue) {
+                try {
+                  element.setAttribute(key, value);
+                } catch (error) {
+                  ErrorHandler.handle(error);
                 }
               }
             }
-
-            break;
-          }
-        }
-      }
-
-      // handle prevAttributes
-
-      for (const key in prevAttributes) {
-        // ignore if key is found in attributes
-
-        const found = key in attributes;
-
-        if (found) {
-          continue;
-        }
-
-        const prevValue = prevAttributes[key];
-
-        switch (key) {
-          case "key":
-          case "ref": {
-            break;
-          }
-
-          default: {
-            const isPrevValueHandler = typeof prevValue === "function";
+          } else {
+            // value is null
 
             if (prevValue !== null) {
               // delete element's handler or attribute
@@ -728,27 +690,64 @@ export class Tree {
                 element.removeAttribute(key);
               }
             }
-
-            break;
           }
+
+          break;
         }
       }
-    } else {
-      // node is a text node
+    }
 
-      const slot = edge.slot;
+    // handle prevAttributes
 
-      const prevSlot = prevEdge?.slot ?? null;
+    for (const key in prevAttributes) {
+      // ignore if key is found in attributes
 
-      const text = node as Text;
+      const found = key in attributes;
 
-      const value = `${slot}`;
-
-      const prevValue = prevSlot !== null ? `${prevSlot}` : null;
-
-      if (value !== prevValue) {
-        text.nodeValue = value;
+      if (found) {
+        continue;
       }
+
+      const prevValue = prevAttributes[key];
+
+      switch (key) {
+        case "key":
+        case "ref": {
+          break;
+        }
+
+        default: {
+          const isPrevValueHandler = typeof prevValue === "function";
+
+          if (prevValue !== null) {
+            // delete element's handler or attribute
+
+            if (isPrevValueHandler) {
+              elementAny[key] = null;
+            } else {
+              element.removeAttribute(key);
+            }
+          }
+
+          break;
+        }
+      }
+    }
+  }
+
+  private patchTextNode(edge: Edge, prevEdge: Edge | null): void {
+    const slot = edge.slot;
+
+    const prevSlot = prevEdge?.slot ?? null;
+
+    const text = edge.node as Text;
+
+    const value = `${slot}`;
+
+    const prevValue = prevSlot !== null ? `${prevSlot}` : null;
+
+    if (value !== prevValue) {
+      text.nodeValue = value;
     }
   }
 
