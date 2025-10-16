@@ -515,7 +515,7 @@ export class Tree {
 
     const ref = slot instanceof Slot ? slot.getRef() : null;
 
-    if (ref instanceof Ref) {
+    if (ref !== null) {
       ref.value = null;
     }
 
